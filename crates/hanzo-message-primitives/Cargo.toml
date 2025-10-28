@@ -35,7 +35,7 @@ os_path = { workspace = true }
 crate-type = ["rlib"]
 
 [dev-dependencies]
-serial_test = "0.5"
+serial_test = "3.2"
 tempfile = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
