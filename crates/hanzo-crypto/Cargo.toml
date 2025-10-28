@@ -63,5 +63,5 @@ zeroize = { version = "1.8", features = ["derive"] }
 
 [dev-dependencies]
 tokio-test = "0.4"
-criterion = "0.5"
+criterion = "0.7"
 proptest = "1.0"
