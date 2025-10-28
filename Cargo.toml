@@ -55,7 +55,7 @@ r2d2 = "0.8"
 r2d2_sqlite = "0.25"
 
 # Additional utilities
-dirs = "5.0"
+dirs = "6.0"
 tempfile = "3.19"
 lazy_static = "1.5"
 bincode = "1.3"
