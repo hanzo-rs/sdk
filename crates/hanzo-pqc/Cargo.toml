@@ -44,7 +44,7 @@ tokio = { workspace = true }
 
 # Random number generation (FIPS compliant)
 rand = { workspace = true }
-getrandom = { version = "0.2", features = ["std"] }
+getrandom = { version = "0.3", features = ["std"] }
 
 # Attestation support
 hex = { workspace = true }
