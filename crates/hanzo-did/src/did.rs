@@ -53,6 +53,24 @@ impl DID {
         Self::new("lux", username.into())
     }
 
+    /// Create a Pars network DID (mainnet shorthand)
+    /// Chain ID: 494949
+    pub fn pars(username: impl Into<String>) -> Self {
+        Self::new("pars", username.into())
+    }
+
+    /// Create a Zoo network DID (mainnet shorthand)
+    /// Chain ID: 200200
+    pub fn zoo(username: impl Into<String>) -> Self {
+        Self::new("zoo", username.into())
+    }
+
+    /// Create an AI DID (Hanzo AI chain)
+    /// Chain ID: 36963
+    pub fn ai(username: impl Into<String>) -> Self {
+        Self::new("ai", username.into())
+    }
+
     /// Create a local development DID for Hanzo
     pub fn hanzo_local(identifier: impl Into<String>) -> Self {
         Self::new("hanzo", format!("local:{}", identifier.into()))
@@ -61,6 +79,16 @@ impl DID {
     /// Create a local development DID for Lux
     pub fn lux_local(identifier: impl Into<String>) -> Self {
         Self::new("lux", format!("local:{}", identifier.into()))
+    }
+
+    /// Create a local development DID for Pars
+    pub fn pars_local(identifier: impl Into<String>) -> Self {
+        Self::new("pars", format!("local:{}", identifier.into()))
+    }
+
+    /// Create a local development DID for Zoo
+    pub fn zoo_local(identifier: impl Into<String>) -> Self {
+        Self::new("zoo", format!("local:{}", identifier.into()))
     }
 
     /// Create a Hanzo DID for Ethereum (explicit chain)
@@ -224,8 +252,10 @@ impl DID {
 
         // For simple DIDs like did:hanzo:username or did:lux:username
         match self.method.as_str() {
-            "hanzo" => Some(Network::Hanzo),
+            "hanzo" | "ai" => Some(Network::Hanzo), // did:hanzo and did:ai are same network
             "lux" => Some(Network::Lux),
+            "pars" => Some(Network::Pars),
+            "zoo" => Some(Network::Zoo),
             _ => None,
         }
     }
@@ -265,6 +295,9 @@ impl DID {
             // Primary networks
             DID::hanzo(identifier.clone()), // did:hanzo:zeekay
             DID::lux(identifier.clone()),   // did:lux:zeekay
+            DID::pars(identifier.clone()),  // did:pars:zeekay (Pars Network 494949)
+            DID::zoo(identifier.clone()),   // did:zoo:zeekay (Zoo Network 200200)
+            DID::ai(identifier.clone()),    // did:ai:zeekay (Hanzo AI 36963)
             // Native chain DIDs
             DID::eth(identifier.clone()),      // did:eth:zeekay
             DID::base(identifier.clone()),     // did:base:zeekay
@@ -274,6 +307,8 @@ impl DID {
             // Local development
             DID::hanzo_local(identifier.clone()), // did:hanzo:local:zeekay
             DID::lux_local(identifier.clone()),   // did:lux:local:zeekay
+            DID::pars_local(identifier.clone()),  // did:pars:local:zeekay
+            DID::zoo_local(identifier.clone()),   // did:zoo:local:zeekay
             // Testnets
             DID::sepolia(identifier.clone()), // did:sepolia:zeekay
             DID::base_sepolia(identifier.clone()), // did:base-sepolia:zeekay
@@ -293,6 +328,9 @@ impl DID {
         match context.to_lowercase().as_str() {
             "hanzo" => DID::hanzo(clean_username),
             "lux" => DID::lux(clean_username),
+            "pars" | "sparklepony" | "spc" => DID::pars(clean_username),
+            "zoo" => DID::zoo(clean_username),
+            "ai" => DID::ai(clean_username),
             _ => DID::hanzo(clean_username), // Default to hanzo
         }
     }
@@ -335,10 +373,19 @@ impl FromStr for DID {
 /// Supported networks for DIDs
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Network {
-    /// Hanzo mainnet (shorthand: did:hanzo:username)
+    /// Hanzo mainnet (shorthand: did:hanzo:username or did:ai:username)
+    /// Chain ID: 36963
     Hanzo,
     /// Lux mainnet (shorthand: did:lux:username)
+    /// Chain ID: 96369
     Lux,
+    /// Pars Network (shorthand: did:pars:username)
+    /// Chain ID: 494949
+    /// Also: sparklepony.xyz (SPC)
+    Pars,
+    /// Zoo Network (shorthand: did:zoo:username)
+    /// Chain ID: 200200
+    Zoo,
     /// Local development networks
     Local,
     /// Ethereum mainnet (native: did:eth:username)
@@ -365,6 +412,10 @@ impl Network {
     /// Get the chain ID for EVM-compatible networks
     pub fn chain_id(&self) -> Option<u64> {
         match self {
+            Network::Hanzo => Some(36963),      // Hanzo Network (did:hanzo, did:ai)
+            Network::Lux => Some(96369),        // Lux Network
+            Network::Pars => Some(494949),      // Pars Network (also sparklepony.xyz)
+            Network::Zoo => Some(200200),       // Zoo Network
             Network::Ethereum => Some(1),
             Network::Sepolia => Some(11155111),
             Network::Base => Some(8453),
@@ -372,7 +423,7 @@ impl Network {
             Network::Polygon => Some(137),
             Network::Arbitrum => Some(42161),
             Network::Optimism => Some(10),
-            Network::LuxFuji => Some(43113), // Fuji testnet
+            Network::LuxFuji => Some(43113),    // Fuji testnet
             _ => None,
         }
     }
@@ -388,8 +439,10 @@ impl Network {
     /// Get RPC endpoint for the network
     pub fn rpc_endpoint(&self) -> Option<&'static str> {
         match self {
-            Network::Hanzo => Some("https://rpc.hanzo.network"),
+            Network::Hanzo => Some("https://rpc.hanzo.ai"),
             Network::Lux => Some("https://api.lux.network/ext/bc/C/rpc"),
+            Network::Pars => Some("https://rpc.pars.network"),      // alt: rpc.sparklepony.xyz
+            Network::Zoo => Some("https://rpc.zoo.network"),
             Network::Ethereum => Some("https://eth.llamarpc.com"),
             Network::Sepolia => Some("https://rpc.sepolia.org"),
             Network::Base => Some("https://mainnet.base.org"),
@@ -408,6 +461,8 @@ impl fmt::Display for Network {
         match self {
             Network::Hanzo => write!(f, "hanzo"),
             Network::Lux => write!(f, "lux"),
+            Network::Pars => write!(f, "pars"),
+            Network::Zoo => write!(f, "zoo"),
             Network::Local => write!(f, "local"),
             Network::Ethereum => write!(f, "eth"),
             Network::Sepolia => write!(f, "sepolia"),
@@ -427,8 +482,10 @@ impl FromStr for Network {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "hanzo" => Ok(Network::Hanzo),
+            "hanzo" | "ai" => Ok(Network::Hanzo),  // did:hanzo and did:ai are same network
             "lux" => Ok(Network::Lux),
+            "pars" | "sparklepony" | "spc" => Ok(Network::Pars),
+            "zoo" => Ok(Network::Zoo),
             "local" | "localhost" => Ok(Network::Local),
             "eth" | "ethereum" => Ok(Network::Ethereum),
             "sepolia" => Ok(Network::Sepolia),
@@ -541,5 +598,67 @@ mod tests {
         assert!(Network::Hanzo.rpc_endpoint().is_some());
         assert!(Network::Lux.rpc_endpoint().is_some());
         assert!(Network::Ethereum.rpc_endpoint().is_some());
+    }
+
+    #[test]
+    fn test_pars_zoo_ai_dids() {
+        // Test Pars Network DIDs
+        let pars_did = DID::pars("cyrus");
+        assert_eq!(pars_did.to_string(), "did:pars:cyrus");
+        assert_eq!(pars_did.get_network(), Some(Network::Pars));
+        assert_eq!(Network::Pars.chain_id(), Some(494949));
+
+        // Test Zoo Network DIDs
+        let zoo_did = DID::zoo("alice");
+        assert_eq!(zoo_did.to_string(), "did:zoo:alice");
+        assert_eq!(zoo_did.get_network(), Some(Network::Zoo));
+        assert_eq!(Network::Zoo.chain_id(), Some(200200));
+
+        // Test AI DID (alias for Hanzo)
+        let ai_did = DID::ai("bob");
+        assert_eq!(ai_did.to_string(), "did:ai:bob");
+        assert_eq!(ai_did.get_network(), Some(Network::Hanzo)); // Same network
+        assert_eq!(Network::Hanzo.chain_id(), Some(36963));
+
+        // Test AI and Hanzo are same entity
+        let hanzo_did = DID::hanzo("bob");
+        assert!(ai_did.is_same_entity(&hanzo_did));
+    }
+
+    #[test]
+    fn test_pars_sparklepony_alias() {
+        // Test context-aware resolution with sparklepony alias
+        let pars_context = DID::from_username("@cyrus", "pars");
+        let spc_context = DID::from_username("cyrus", "sparklepony");
+        let spc_short = DID::from_username("cyrus", "spc");
+
+        assert_eq!(pars_context.method, "pars");
+        assert_eq!(spc_context.method, "pars");
+        assert_eq!(spc_short.method, "pars");
+
+        // All resolve to same identity
+        assert!(pars_context.is_same_entity(&spc_context));
+        assert!(pars_context.is_same_entity(&spc_short));
+    }
+
+    #[test]
+    fn test_omnichain_variants_includes_new_networks() {
+        let did = DID::hanzo("zeekay");
+        let variants = did.get_omnichain_variants();
+
+        // Check new networks are included
+        assert!(variants.contains(&DID::pars("zeekay")));
+        assert!(variants.contains(&DID::zoo("zeekay")));
+        assert!(variants.contains(&DID::ai("zeekay")));
+        assert!(variants.contains(&DID::pars_local("zeekay")));
+        assert!(variants.contains(&DID::zoo_local("zeekay")));
+    }
+
+    #[test]
+    fn test_network_rpc_endpoints() {
+        assert_eq!(Network::Pars.rpc_endpoint(), Some("https://rpc.pars.network"));
+        assert_eq!(Network::Zoo.rpc_endpoint(), Some("https://rpc.zoo.network"));
+        assert_eq!(Network::Hanzo.rpc_endpoint(), Some("https://rpc.hanzo.ai"));
+        assert_eq!(Network::Lux.rpc_endpoint(), Some("https://api.lux.network/ext/bc/C/rpc"));
     }
 }
