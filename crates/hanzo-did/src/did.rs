@@ -71,6 +71,23 @@ impl DID {
         Self::new("ai", username.into())
     }
 
+    /// Create a Sparkle Pony DID (primary method)
+    /// Chain ID: 36911
+    /// Reserved methods: did:sparkle, did:spc, did:sparklepony
+    pub fn sparkle(username: impl Into<String>) -> Self {
+        Self::new("sparkle", username.into())
+    }
+
+    /// Create a Sparkle Pony DID (spc alias)
+    pub fn spc(username: impl Into<String>) -> Self {
+        Self::new("spc", username.into())
+    }
+
+    /// Create a Sparkle Pony DID (sparklepony alias)
+    pub fn sparklepony(username: impl Into<String>) -> Self {
+        Self::new("sparklepony", username.into())
+    }
+
     /// Create a local development DID for Hanzo
     pub fn hanzo_local(identifier: impl Into<String>) -> Self {
         Self::new("hanzo", format!("local:{}", identifier.into()))
@@ -89,6 +106,11 @@ impl DID {
     /// Create a local development DID for Zoo
     pub fn zoo_local(identifier: impl Into<String>) -> Self {
         Self::new("zoo", format!("local:{}", identifier.into()))
+    }
+
+    /// Create a local development DID for Sparkle Pony
+    pub fn sparkle_local(identifier: impl Into<String>) -> Self {
+        Self::new("sparkle", format!("local:{}", identifier.into()))
     }
 
     /// Create a Hanzo DID for Ethereum (explicit chain)
@@ -256,6 +278,7 @@ impl DID {
             "lux" => Some(Network::Lux),
             "pars" => Some(Network::Pars),
             "zoo" => Some(Network::Zoo),
+            "sparkle" | "spc" | "sparklepony" => Some(Network::SparklePony), // All three reserved
             _ => None,
         }
     }
@@ -293,11 +316,14 @@ impl DID {
         let identifier = self.get_identifier();
         vec![
             // Primary networks
-            DID::hanzo(identifier.clone()), // did:hanzo:zeekay
-            DID::lux(identifier.clone()),   // did:lux:zeekay
-            DID::pars(identifier.clone()),  // did:pars:zeekay (Pars Network 494949)
-            DID::zoo(identifier.clone()),   // did:zoo:zeekay (Zoo Network 200200)
-            DID::ai(identifier.clone()),    // did:ai:zeekay (Hanzo AI 36963)
+            DID::hanzo(identifier.clone()),    // did:hanzo:zeekay
+            DID::lux(identifier.clone()),      // did:lux:zeekay
+            DID::pars(identifier.clone()),     // did:pars:zeekay (Pars Network 494949)
+            DID::zoo(identifier.clone()),      // did:zoo:zeekay (Zoo Network 200200)
+            DID::ai(identifier.clone()),       // did:ai:zeekay (Hanzo AI 36963)
+            DID::sparkle(identifier.clone()),  // did:sparkle:zeekay (Sparkle Pony 36911)
+            DID::spc(identifier.clone()),      // did:spc:zeekay (SPC alias)
+            DID::sparklepony(identifier.clone()), // did:sparklepony:zeekay (SPC alias)
             // Native chain DIDs
             DID::eth(identifier.clone()),      // did:eth:zeekay
             DID::base(identifier.clone()),     // did:base:zeekay
@@ -305,10 +331,11 @@ impl DID {
             DID::arbitrum(identifier.clone()), // did:arbitrum:zeekay
             DID::optimism(identifier.clone()), // did:optimism:zeekay
             // Local development
-            DID::hanzo_local(identifier.clone()), // did:hanzo:local:zeekay
-            DID::lux_local(identifier.clone()),   // did:lux:local:zeekay
-            DID::pars_local(identifier.clone()),  // did:pars:local:zeekay
-            DID::zoo_local(identifier.clone()),   // did:zoo:local:zeekay
+            DID::hanzo_local(identifier.clone()),   // did:hanzo:local:zeekay
+            DID::lux_local(identifier.clone()),     // did:lux:local:zeekay
+            DID::pars_local(identifier.clone()),    // did:pars:local:zeekay
+            DID::zoo_local(identifier.clone()),     // did:zoo:local:zeekay
+            DID::sparkle_local(identifier.clone()), // did:sparkle:local:zeekay
             // Testnets
             DID::sepolia(identifier.clone()), // did:sepolia:zeekay
             DID::base_sepolia(identifier.clone()), // did:base-sepolia:zeekay
@@ -328,7 +355,8 @@ impl DID {
         match context.to_lowercase().as_str() {
             "hanzo" => DID::hanzo(clean_username),
             "lux" => DID::lux(clean_username),
-            "pars" | "sparklepony" | "spc" => DID::pars(clean_username),
+            "pars" => DID::pars(clean_username),
+            "sparkle" | "spc" | "sparklepony" => DID::sparkle(clean_username), // SPC (chain 36911)
             "zoo" => DID::zoo(clean_username),
             "ai" => DID::ai(clean_username),
             _ => DID::hanzo(clean_username), // Default to hanzo
@@ -381,8 +409,11 @@ pub enum Network {
     Lux,
     /// Pars Network (shorthand: did:pars:username)
     /// Chain ID: 494949
-    /// Also: sparklepony.xyz (SPC)
     Pars,
+    /// Sparkle Pony Chain (shorthand: did:sparkle:username, did:spc:username, did:sparklepony:username)
+    /// Chain ID: 36911
+    /// Reserved DID methods: sparkle, spc, sparklepony
+    SparklePony,
     /// Zoo Network (shorthand: did:zoo:username)
     /// Chain ID: 200200
     Zoo,
@@ -412,10 +443,11 @@ impl Network {
     /// Get the chain ID for EVM-compatible networks
     pub fn chain_id(&self) -> Option<u64> {
         match self {
-            Network::Hanzo => Some(36963),      // Hanzo Network (did:hanzo, did:ai)
-            Network::Lux => Some(96369),        // Lux Network
-            Network::Pars => Some(494949),      // Pars Network (also sparklepony.xyz)
-            Network::Zoo => Some(200200),       // Zoo Network
+            Network::Hanzo => Some(36963),       // Hanzo Network (did:hanzo, did:ai)
+            Network::Lux => Some(96369),         // Lux Network
+            Network::Pars => Some(494949),       // Pars Network
+            Network::SparklePony => Some(36911), // Sparkle Pony Chain (did:sparkle, did:spc, did:sparklepony)
+            Network::Zoo => Some(200200),        // Zoo Network
             Network::Ethereum => Some(1),
             Network::Sepolia => Some(11155111),
             Network::Base => Some(8453),
@@ -423,7 +455,7 @@ impl Network {
             Network::Polygon => Some(137),
             Network::Arbitrum => Some(42161),
             Network::Optimism => Some(10),
-            Network::LuxFuji => Some(43113),    // Fuji testnet
+            Network::LuxFuji => Some(43113),     // Fuji testnet
             _ => None,
         }
     }
@@ -441,7 +473,8 @@ impl Network {
         match self {
             Network::Hanzo => Some("https://rpc.hanzo.ai"),
             Network::Lux => Some("https://api.lux.network/ext/bc/C/rpc"),
-            Network::Pars => Some("https://rpc.pars.network"),      // alt: rpc.sparklepony.xyz
+            Network::Pars => Some("https://rpc.pars.network"),
+            Network::SparklePony => Some("https://rpc.sparklepony.xyz"),
             Network::Zoo => Some("https://rpc.zoo.network"),
             Network::Ethereum => Some("https://eth.llamarpc.com"),
             Network::Sepolia => Some("https://rpc.sepolia.org"),
@@ -462,6 +495,7 @@ impl fmt::Display for Network {
             Network::Hanzo => write!(f, "hanzo"),
             Network::Lux => write!(f, "lux"),
             Network::Pars => write!(f, "pars"),
+            Network::SparklePony => write!(f, "sparkle"),
             Network::Zoo => write!(f, "zoo"),
             Network::Local => write!(f, "local"),
             Network::Ethereum => write!(f, "eth"),
@@ -484,7 +518,8 @@ impl FromStr for Network {
         match s.to_lowercase().as_str() {
             "hanzo" | "ai" => Ok(Network::Hanzo),  // did:hanzo and did:ai are same network
             "lux" => Ok(Network::Lux),
-            "pars" | "sparklepony" | "spc" => Ok(Network::Pars),
+            "pars" => Ok(Network::Pars),
+            "sparkle" | "spc" | "sparklepony" => Ok(Network::SparklePony), // All three reserved for SPC
             "zoo" => Ok(Network::Zoo),
             "local" | "localhost" => Ok(Network::Local),
             "eth" | "ethereum" => Ok(Network::Ethereum),
@@ -626,19 +661,37 @@ mod tests {
     }
 
     #[test]
-    fn test_pars_sparklepony_alias() {
-        // Test context-aware resolution with sparklepony alias
-        let pars_context = DID::from_username("@cyrus", "pars");
-        let spc_context = DID::from_username("cyrus", "sparklepony");
-        let spc_short = DID::from_username("cyrus", "spc");
+    fn test_sparkle_pony_dids() {
+        // Test Sparkle Pony Chain DIDs (separate from Pars)
+        let sparkle_did = DID::sparkle("alice");
+        let spc_did = DID::spc("alice");
+        let sparklepony_did = DID::sparklepony("alice");
 
-        assert_eq!(pars_context.method, "pars");
-        assert_eq!(spc_context.method, "pars");
-        assert_eq!(spc_short.method, "pars");
+        // All three methods are for Sparkle Pony Chain
+        assert_eq!(sparkle_did.to_string(), "did:sparkle:alice");
+        assert_eq!(spc_did.to_string(), "did:spc:alice");
+        assert_eq!(sparklepony_did.to_string(), "did:sparklepony:alice");
 
-        // All resolve to same identity
-        assert!(pars_context.is_same_entity(&spc_context));
-        assert!(pars_context.is_same_entity(&spc_short));
+        // All resolve to SparklePony network
+        assert_eq!(sparkle_did.get_network(), Some(Network::SparklePony));
+        assert_eq!(spc_did.get_network(), Some(Network::SparklePony));
+        assert_eq!(sparklepony_did.get_network(), Some(Network::SparklePony));
+
+        // Chain ID is 36911
+        assert_eq!(Network::SparklePony.chain_id(), Some(36911));
+
+        // RPC endpoint
+        assert_eq!(Network::SparklePony.rpc_endpoint(), Some("https://rpc.sparklepony.xyz"));
+
+        // All three are same entity
+        assert!(sparkle_did.is_same_entity(&spc_did));
+        assert!(sparkle_did.is_same_entity(&sparklepony_did));
+
+        // Pars is separate from SparklePony
+        let pars_did = DID::pars("alice");
+        assert_eq!(pars_did.get_network(), Some(Network::Pars));
+        assert_eq!(Network::Pars.chain_id(), Some(494949));
+        assert!(pars_did.is_same_entity(&sparkle_did)); // Same username = same entity
     }
 
     #[test]
@@ -646,19 +699,48 @@ mod tests {
         let did = DID::hanzo("zeekay");
         let variants = did.get_omnichain_variants();
 
-        // Check new networks are included
+        // Check Pars and Zoo networks are included
         assert!(variants.contains(&DID::pars("zeekay")));
         assert!(variants.contains(&DID::zoo("zeekay")));
         assert!(variants.contains(&DID::ai("zeekay")));
         assert!(variants.contains(&DID::pars_local("zeekay")));
         assert!(variants.contains(&DID::zoo_local("zeekay")));
+
+        // Check Sparkle Pony Chain variants (all three reserved methods)
+        assert!(variants.contains(&DID::sparkle("zeekay")));
+        assert!(variants.contains(&DID::spc("zeekay")));
+        assert!(variants.contains(&DID::sparklepony("zeekay")));
+        assert!(variants.contains(&DID::sparkle_local("zeekay")));
     }
 
     #[test]
     fn test_network_rpc_endpoints() {
         assert_eq!(Network::Pars.rpc_endpoint(), Some("https://rpc.pars.network"));
+        assert_eq!(Network::SparklePony.rpc_endpoint(), Some("https://rpc.sparklepony.xyz"));
         assert_eq!(Network::Zoo.rpc_endpoint(), Some("https://rpc.zoo.network"));
         assert_eq!(Network::Hanzo.rpc_endpoint(), Some("https://rpc.hanzo.ai"));
         assert_eq!(Network::Lux.rpc_endpoint(), Some("https://api.lux.network/ext/bc/C/rpc"));
+    }
+
+    #[test]
+    fn test_from_username_context() {
+        // Test context-aware DID creation
+        let pars_did = DID::from_username("@alice", "pars");
+        assert_eq!(pars_did.to_string(), "did:pars:alice");
+        assert_eq!(pars_did.get_network(), Some(Network::Pars));
+
+        let spc_did = DID::from_username("alice", "spc");
+        assert_eq!(spc_did.to_string(), "did:sparkle:alice");
+        assert_eq!(spc_did.get_network(), Some(Network::SparklePony));
+
+        let sparkle_did = DID::from_username("alice", "sparkle");
+        assert_eq!(sparkle_did.to_string(), "did:sparkle:alice");
+
+        let sparklepony_did = DID::from_username("alice", "sparklepony");
+        assert_eq!(sparklepony_did.to_string(), "did:sparkle:alice");
+
+        // All SPC contexts should create sparkle DIDs
+        assert_eq!(spc_did, sparkle_did);
+        assert_eq!(spc_did, sparklepony_did);
     }
 }
