@@ -55,3 +55,5 @@ release/
 crates/hanzo-tools-runner/hanzo-tools-runner-resources/deno
 crates/hanzo-tools-runner/hanzo-tools-runner-resources/uv
 crates/hanzo-tools-runner/hanzo-tools-runner-resources/*.zip
+
+CLAUDE.md
