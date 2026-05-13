@@ -59,7 +59,7 @@ jobs:
           - stable
           - beta
           - nightly
-          - 1.85.0  # MSRV (rmcp 0.8+ uses edition2024, requires Rust 1.85+)
+          - 1.88.0  # MSRV — bumped from 1.85 since icu_provider 2.2 + time 0.3.47 need 1.86 / 1.88
         exclude:
           # Exclude some combinations to save CI time
           - os: macos-latest
