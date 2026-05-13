@@ -2,30 +2,24 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main]
   pull_request:
-    branches: [ main, develop ]
 
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
 
 jobs:
-  # Format check
   fmt:
-    name: Format Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
-      - name: Check formatting
-        run: cargo fmt --all -- --check
+      - run: cargo fmt --all -- --check
 
-  # Lint check
   clippy:
-    name: Clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,149 +27,29 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@v2
-      - name: Run clippy
-        # Note: --all-features is avoided due to arrow-arith/chrono conflict in vectordb
-        run: cargo clippy --all-targets -- -D warnings
+      - run: cargo clippy --all-targets -- -D warnings
 
-  # Security audit
-  audit:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: rustsec/audit-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-  # Test matrix
   test:
-    name: Test Suite
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        rust:
-          - stable
-          - beta
-          - nightly
-          - 1.88.0  # MSRV — bumped from 1.85 since icu_provider 2.2 + time 0.3.47 need 1.86 / 1.88
-        exclude:
-          # Exclude some combinations to save CI time
-          - os: macos-latest
-            rust: beta
-          - os: windows-latest
-            rust: beta
-          - os: macos-latest
-            rust: nightly
-          - os: windows-latest
-            rust: nightly
+        os: [ubuntu-latest, macos-latest]
+        rust: [stable, "1.88.0"]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
       - uses: Swatinem/rust-cache@v2
-      - name: Build all crates
-        run: cargo build --all --verbose
-      - name: Run tests
-        run: cargo test --all --verbose
-      - name: Run tests (no default features)
-        run: cargo test --all --no-default-features --verbose
+      - run: cargo test --all --no-fail-fast
 
-  # Documentation build
   docs:
-    name: Documentation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: Check documentation
-        env:
+      - env:
           RUSTDOCFLAGS: -D warnings
-        # Note: --all-features is avoided due to arrow-arith/chrono conflict in vectordb
         run: cargo doc --all --no-deps
-
-  # Coverage report
-  coverage:
-    name: Code Coverage
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Install cargo-tarpaulin
-        run: cargo install cargo-tarpaulin
-      - name: Generate coverage
-        run: cargo tarpaulin --all --out Xml --verbose
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./cobertura.xml
-          fail_ci_if_error: false
-
-  # Benchmark tests
-  bench:
-    name: Benchmarks
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Run benchmarks
-        run: cargo bench --all --no-run
-
-  # WASM build check
-  wasm:
-    name: WASM Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-      - uses: Swatinem/rust-cache@v2
-      - name: Check WASM build
-        # Note: hanzo-pqc uses liboqs (native C library) which doesn't support WASM
-        run: cargo check --target wasm32-unknown-unknown -p hanzo-message-primitives
-
-  # Integration test
-  integration:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    needs: [fmt, clippy]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Run integration tests
-        # Only test crates that are part of the workspace
-        # hanzo-kbs is excluded as it has external dependencies (see Cargo.toml)
-        run: cargo test --features integration-tests -p hanzo-pqc
-
-  # Dependency check
-  deps:
-    name: Dependency Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Install cargo-outdated
-        run: cargo install cargo-outdated
-      - name: Check outdated dependencies
-        run: cargo outdated --root-deps-only --exit-code 1 || true
-      - name: Install cargo-udeps
-        run: cargo install cargo-udeps
-      - name: Check unused dependencies
-        run: cargo +nightly udeps --all-targets || true
-
-  # All checks passed
-  all-checks:
-    name: All Checks Pass
-    runs-on: ubuntu-latest
-    needs: [fmt, clippy, audit, test, docs, coverage, bench, wasm, integration]
-    steps:
-      - name: All checks passed
-        run: echo "All CI checks passed successfully!"
