@@ -1,7 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/hanzo-pqc",
     "crates/hanzo-crypto",
     "crates/hanzo-did",
     "crates/hanzo-message-primitives",
@@ -103,7 +102,7 @@ proptest = "1.0"
 tokio-test = "0.4"
 
 # Internal workspace crates
-hanzo-pqc = { version = "1.1.21", path = "./crates/hanzo-pqc" }
+hanzo-pqc = "1.1.22"  # canonical PQC — github.com/hanzoai/pqc
 hanzo-crypto = { version = "1.1.21", path = "./crates/hanzo-crypto" }
 hanzo-did = { version = "1.1.21", path = "./crates/hanzo-did" }
 hanzo-message-primitives = { version = "1.1.21", path = "./crates/hanzo-message-primitives" }
