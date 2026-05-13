@@ -373,11 +373,7 @@ impl AgentMarketplace {
     pub fn get_active_offers(&self, service_type: Option<ServiceType>) -> Vec<ServiceOffer> {
         self.clean_expired();
 
-        let mut offers: Vec<ServiceOffer> = self
-            .offers
-            .iter()
-            .map(|r| r.value().clone())
-            .collect();
+        let mut offers: Vec<ServiceOffer> = self.offers.iter().map(|r| r.value().clone()).collect();
 
         if let Some(st) = service_type {
             offers.retain(|o| o.service_type == st);
@@ -391,11 +387,8 @@ impl AgentMarketplace {
     pub fn get_active_requests(&self, service_type: Option<ServiceType>) -> Vec<ServiceRequest> {
         self.clean_expired();
 
-        let mut requests: Vec<ServiceRequest> = self
-            .requests
-            .iter()
-            .map(|r| r.value().clone())
-            .collect();
+        let mut requests: Vec<ServiceRequest> =
+            self.requests.iter().map(|r| r.value().clone()).collect();
 
         if let Some(st) = service_type {
             requests.retain(|r| r.service_type == st);

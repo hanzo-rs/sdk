@@ -1,6 +1,6 @@
 use crate::embedding_generator::EmbeddingGenerator;
-use crate::model_type::EmbeddingModelType;
 use crate::hanzo_embedding_errors::HanzoEmbeddingError;
+use crate::model_type::EmbeddingModelType;
 use async_trait::async_trait;
 
 #[derive(Clone)]
@@ -32,11 +32,20 @@ impl EmbeddingGenerator for MockGenerator {
         Box::new((*self).clone())
     }
 
-    async fn generate_embedding(&self, _input_string: &str) -> Result<Vec<f32>, HanzoEmbeddingError> {
+    async fn generate_embedding(
+        &self,
+        _input_string: &str,
+    ) -> Result<Vec<f32>, HanzoEmbeddingError> {
         Ok(vec![0.0; self.num_embeddings])
     }
 
-    async fn generate_embeddings(&self, input_strings: &Vec<String>) -> Result<Vec<Vec<f32>>, HanzoEmbeddingError> {
-        Ok(input_strings.iter().map(|_| vec![0.0; self.num_embeddings]).collect())
+    async fn generate_embeddings(
+        &self,
+        input_strings: &Vec<String>,
+    ) -> Result<Vec<Vec<f32>>, HanzoEmbeddingError> {
+        Ok(input_strings
+            .iter()
+            .map(|_| vec![0.0; self.num_embeddings])
+            .collect())
     }
 }

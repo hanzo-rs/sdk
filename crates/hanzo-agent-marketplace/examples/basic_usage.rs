@@ -108,5 +108,8 @@ fn main() {
     let final_stats = marketplace.get_stats();
     println!("\n📊 Final Statistics:");
     println!("  Total Volume: {} ETH", final_stats.total_volume_eth);
-    println!("  Completed Transactions: {}", final_stats.total_transactions);
+    println!(
+        "  Completed Transactions: {}",
+        final_stats.total_transactions
+    );
 }

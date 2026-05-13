@@ -22,19 +22,25 @@ impl EmbeddingModelType {
         std::env::var("DEFAULT_EMBEDDING_MODEL")
             .and_then(|s| Self::from_string(&s).map_err(|_| std::env::VarError::NotPresent))
             .unwrap_or_else(|_| {
-                EmbeddingModelType::OllamaTextEmbeddingsInference(OllamaTextEmbeddingsInference::EmbeddingGemma300M)
+                EmbeddingModelType::OllamaTextEmbeddingsInference(
+                    OllamaTextEmbeddingsInference::EmbeddingGemma300M,
+                )
             })
     }
 
     pub fn max_input_token_count(&self) -> usize {
         match self {
-            EmbeddingModelType::OllamaTextEmbeddingsInference(model) => model.max_input_token_count(),
+            EmbeddingModelType::OllamaTextEmbeddingsInference(model) => {
+                model.max_input_token_count()
+            }
         }
     }
 
     pub fn embedding_normalization_factor(&self) -> f32 {
         match self {
-            EmbeddingModelType::OllamaTextEmbeddingsInference(model) => model.embedding_normalization_factor(),
+            EmbeddingModelType::OllamaTextEmbeddingsInference(model) => {
+                model.embedding_normalization_factor()
+            }
         }
     }
 
@@ -130,21 +136,30 @@ mod tests {
     fn test_parse_snowflake_arctic_embed_xs() {
         let model_str = "snowflake-arctic-embed:xs";
         let parsed_model = OllamaTextEmbeddingsInference::from_string(model_str);
-        assert_eq!(parsed_model, Ok(OllamaTextEmbeddingsInference::SnowflakeArcticEmbedM));
+        assert_eq!(
+            parsed_model,
+            Ok(OllamaTextEmbeddingsInference::SnowflakeArcticEmbedM)
+        );
     }
 
     #[test]
     fn test_parse_jina_embeddings_v2_base_es() {
         let model_str = "jina/jina-embeddings-v2-base-es:latest";
         let parsed_model = OllamaTextEmbeddingsInference::from_string(model_str);
-        assert_eq!(parsed_model, Ok(OllamaTextEmbeddingsInference::JinaEmbeddingsV2BaseEs));
+        assert_eq!(
+            parsed_model,
+            Ok(OllamaTextEmbeddingsInference::JinaEmbeddingsV2BaseEs)
+        );
     }
 
     #[test]
     fn test_parse_embedding_gemma_300m() {
         let model_str = "embeddinggemma:300m";
         let parsed_model = OllamaTextEmbeddingsInference::from_string(model_str);
-        assert_eq!(parsed_model, Ok(OllamaTextEmbeddingsInference::EmbeddingGemma300M));
+        assert_eq!(
+            parsed_model,
+            Ok(OllamaTextEmbeddingsInference::EmbeddingGemma300M)
+        );
     }
 
     #[test]

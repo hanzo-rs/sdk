@@ -119,7 +119,9 @@ fn main() {
     if let Some(m) = expert_matches.first() {
         let mut result = HashMap::new();
         result.insert("status".to_string(), serde_json::json!("success"));
-        marketplace.complete_match(&m.match_id, result, None).unwrap();
+        marketplace
+            .complete_match(&m.match_id, result, None)
+            .unwrap();
     }
 
     let expert_rep = marketplace.get_reputation("agent_expert");

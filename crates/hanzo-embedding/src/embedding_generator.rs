@@ -1,5 +1,5 @@
-use crate::model_type::EmbeddingModelType;
 use crate::hanzo_embedding_errors::HanzoEmbeddingError;
+use crate::model_type::EmbeddingModelType;
 use async_trait::async_trait;
 
 use lazy_static::lazy_static;
@@ -25,15 +25,22 @@ pub trait EmbeddingGenerator: Sync + Send {
     fn box_clone(&self) -> Box<dyn EmbeddingGenerator>;
 
     /// Generate an embedding for a single input string.
-    async fn generate_embedding(&self, input_string: &str) -> Result<Vec<f32>, HanzoEmbeddingError>;
+    async fn generate_embedding(&self, input_string: &str)
+        -> Result<Vec<f32>, HanzoEmbeddingError>;
 
     /// Generate an embedding for a single input string with default id.
-    async fn generate_embedding_default(&self, input_string: &str) -> Result<Vec<f32>, HanzoEmbeddingError> {
+    async fn generate_embedding_default(
+        &self,
+        input_string: &str,
+    ) -> Result<Vec<f32>, HanzoEmbeddingError> {
         self.generate_embedding(input_string).await
     }
 
     /// Generate embeddings for a batch of input strings.
-    async fn generate_embeddings(&self, input_strings: &Vec<String>) -> Result<Vec<Vec<f32>>, HanzoEmbeddingError>;
+    async fn generate_embeddings(
+        &self,
+        input_strings: &Vec<String>,
+    ) -> Result<Vec<Vec<f32>>, HanzoEmbeddingError>;
 
     /// Generate embeddings for a batch with default ids.
     async fn generate_embeddings_default(
@@ -61,10 +68,17 @@ impl EmbeddingGenerator for RemoteEmbeddingGenerator {
 
     /// Generate an Embedding for an input string by using the external API.
     /// This method batch generates whenever possible to increase speed.
-    async fn generate_embeddings(&self, input_strings: &Vec<String>) -> Result<Vec<Vec<f32>>, HanzoEmbeddingError> {
+    async fn generate_embeddings(
+        &self,
+        input_strings: &Vec<String>,
+    ) -> Result<Vec<Vec<f32>>, HanzoEmbeddingError> {
         let input_strings: Vec<String> = input_strings
             .iter()
-            .map(|s| s.chars().take(self.model_type.max_input_token_count()).collect())
+            .map(|s| {
+                s.chars()
+                    .take(self.model_type.max_input_token_count())
+                    .collect()
+            })
             .collect();
 
         match self.model_type.clone() {
@@ -82,11 +96,18 @@ impl EmbeddingGenerator for RemoteEmbeddingGenerator {
     }
 
     /// Generate an Embedding for an input string by using the external API.
-    async fn generate_embedding(&self, input_string: &str) -> Result<Vec<f32>, HanzoEmbeddingError> {
+    async fn generate_embedding(
+        &self,
+        input_string: &str,
+    ) -> Result<Vec<f32>, HanzoEmbeddingError> {
         let input_strings = [input_string.to_string()];
         let input_strings: Vec<String> = input_strings
             .iter()
-            .map(|s| s.chars().take(self.model_type.max_input_token_count()).collect())
+            .map(|s| {
+                s.chars()
+                    .take(self.model_type.max_input_token_count())
+                    .collect()
+            })
             .collect();
 
         let results = self.generate_embeddings(&input_strings).await?;
@@ -112,7 +133,11 @@ impl EmbeddingGenerator for RemoteEmbeddingGenerator {
 
 impl RemoteEmbeddingGenerator {
     /// Create a RemoteEmbeddingGenerator
-    pub fn new(model_type: EmbeddingModelType, api_url: &str, api_key: Option<String>) -> RemoteEmbeddingGenerator {
+    pub fn new(
+        model_type: EmbeddingModelType,
+        api_url: &str,
+        api_key: Option<String>,
+    ) -> RemoteEmbeddingGenerator {
         RemoteEmbeddingGenerator {
             model_type,
             api_url: api_url.to_string(),
@@ -219,7 +244,8 @@ impl RemoteEmbeddingGenerator {
                     } else {
                         50
                     };
-                    let shortened_max_size = input_string.len().saturating_sub(reduction_step).max(5);
+                    let shortened_max_size =
+                        input_string.len().saturating_sub(reduction_step).max(5);
                     input_string = input_string.chars().take(shortened_max_size).collect();
 
                     retry_count = 0;
@@ -266,7 +292,10 @@ impl RemoteEmbeddingGenerator {
         loop {
             // Prepare the request body
             let request_body = EmbeddingArrayRequestBody {
-                inputs: current_input_strings.iter().map(|s| s.to_string()).collect(),
+                inputs: current_input_strings
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect(),
             };
 
             // Create the HTTP client with a custom timeout
@@ -289,7 +318,8 @@ impl RemoteEmbeddingGenerator {
 
             match response {
                 Ok(response) if response.status().is_success() => {
-                    let embedding_response: Result<Vec<Vec<f32>>, _> = response.json::<Vec<Vec<f32>>>().await;
+                    let embedding_response: Result<Vec<Vec<f32>>, _> =
+                        response.json::<Vec<Vec<f32>>>().await;
                     match embedding_response {
                         Ok(embedding_response) => {
                             return Ok(embedding_response);
@@ -303,7 +333,11 @@ impl RemoteEmbeddingGenerator {
                     }
                 }
                 Ok(response) if response.status() == reqwest::StatusCode::PAYLOAD_TOO_LARGE => {
-                    let max_size = current_input_strings.iter().map(|s| s.len()).max().unwrap_or(0);
+                    let max_size = current_input_strings
+                        .iter()
+                        .map(|s| s.len())
+                        .max()
+                        .unwrap_or(0);
                     // Increase the number of characters removed based on the number of retries
                     let reduction_step = if shortening_retry > 1 {
                         100 * shortening_retry
@@ -353,7 +387,10 @@ impl RemoteEmbeddingGenerator {
     }
 
     /// Generate an Embedding for an input string by using the external OpenAI-matching API.
-    pub async fn generate_embedding_open_ai(&self, input_string: &str) -> Result<Vec<f32>, HanzoEmbeddingError> {
+    pub async fn generate_embedding_open_ai(
+        &self,
+        input_string: &str,
+    ) -> Result<Vec<f32>, HanzoEmbeddingError> {
         // Prepare the request body
         let request_body = EmbeddingRequestBody {
             input: String::from(input_string),
@@ -385,7 +422,10 @@ impl RemoteEmbeddingGenerator {
             // Deserialize the response JSON into a struct (assuming you have an
             // EmbeddingResponse struct)
             let embedding_response: EmbeddingResponse = response.json().await.map_err(|err| {
-                HanzoEmbeddingError::RequestFailed(format!("Failed to deserialize response JSON: {}", err))
+                HanzoEmbeddingError::RequestFailed(format!(
+                    "Failed to deserialize response JSON: {}",
+                    err
+                ))
             })?;
 
             // Use the response to create an Embedding instance

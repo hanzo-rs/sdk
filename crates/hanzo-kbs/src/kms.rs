@@ -16,28 +16,28 @@ pub mod memory_kms;
 pub trait KeyManagementService: Send + Sync {
     /// Initialize the KMS with root key
     async fn initialize(&mut self, config: KmsConfig) -> Result<()>;
-    
+
     /// Create a new tenant KEK
     async fn create_tenant_kek(&self, tenant_id: &str) -> Result<TenantKek>;
-    
+
     /// Create a new agent DEK
     async fn create_agent_dek(&self, agent_id: &str, tenant_id: &str) -> Result<AgentDek>;
-    
+
     /// Wrap a key under a parent key
     async fn wrap_key(&self, key_data: &[u8], parent_key_id: &KeyId) -> Result<Vec<u8>>;
-    
+
     /// Unwrap a key (internal use only, never exposed to KBS)
     async fn unwrap_key(&self, wrapped_key: &[u8], parent_key_id: &KeyId) -> Result<Vec<u8>>;
-    
+
     /// Rotate a key
     async fn rotate_key(&self, key_id: &KeyId) -> Result<KeyId>;
-    
+
     /// Destroy a key
     async fn destroy_key(&self, key_id: &KeyId) -> Result<()>;
-    
+
     /// Get key metadata
     async fn get_key_metadata(&self, key_id: &KeyId) -> Result<KeyInfo>;
-    
+
     /// Get audit logs
     async fn get_audit_logs(
         &self,
@@ -45,7 +45,7 @@ pub trait KeyManagementService: Send + Sync {
         end: DateTime<Utc>,
         filter: Option<AuditFilter>,
     ) -> Result<Vec<KeyAuditEntry>>;
-    
+
     /// BYOK: Import customer key
     async fn import_customer_key(
         &self,
@@ -53,7 +53,7 @@ pub trait KeyManagementService: Send + Sync {
         wrapped_key: &[u8],
         key_metadata: CustomerKeyMetadata,
     ) -> Result<KeyId>;
-    
+
     /// HYOK: Register customer-held key reference
     async fn register_customer_held_key(
         &self,
@@ -74,9 +74,16 @@ pub struct KmsConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum HsmType {
     Software,
-    AwsCloudHsm { cluster_id: String },
-    AzureKeyVault { vault_url: String },
-    HashicorpVault { url: String, namespace: Option<String> },
+    AwsCloudHsm {
+        cluster_id: String,
+    },
+    AzureKeyVault {
+        vault_url: String,
+    },
+    HashicorpVault {
+        url: String,
+        namespace: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -163,7 +170,7 @@ impl KeyHierarchy {
         hasher.finalize_xof().fill(&mut output);
         output
     }
-    
+
     /// Generate a random DEK
     pub fn generate_dek() -> Vec<u8> {
         use rand::RngCore;
