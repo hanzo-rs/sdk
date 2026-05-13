@@ -7,7 +7,7 @@ edition.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-documentation.workspace = true
+documentation = "https://docs.rs/hanzo-agent-marketplace"
 keywords = ["agents", "marketplace", "ai", "decentralized"]
 categories = ["asynchronous"]
 
