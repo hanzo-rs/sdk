@@ -8,14 +8,13 @@ use std::path::PathBuf;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    
-    let mut source = PathBuf::from(
-        std::env::var("HOME").unwrap_or_else(|_| ".".to_string())
-    ).join(".claude/projects");
+
+    let mut source = PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| ".".to_string()))
+        .join(".claude/projects");
     let mut output = PathBuf::from("./conversations");
     let mut min_quality = 0.5f32;
     let mut max_files: Option<usize> = None;
-    
+
     // Simple arg parsing
     let mut i = 1;
     while i < args.len() {
@@ -51,9 +50,15 @@ fn main() {
                 println!("    extract-conversations [OPTIONS]");
                 println!();
                 println!("OPTIONS:");
-                println!("    -s, --source <PATH>       Source directory (default: ~/.claude/projects)");
-                println!("    -o, --output <PATH>       Output directory (default: ./conversations)");
-                println!("    -q, --min-quality <FLOAT> Minimum quality score 0.0-1.0 (default: 0.5)");
+                println!(
+                    "    -s, --source <PATH>       Source directory (default: ~/.claude/projects)"
+                );
+                println!(
+                    "    -o, --output <PATH>       Output directory (default: ./conversations)"
+                );
+                println!(
+                    "    -q, --min-quality <FLOAT> Minimum quality score 0.0-1.0 (default: 0.5)"
+                );
                 println!("    -m, --max-files <NUM>     Maximum files to process");
                 println!("    -h, --help                Print help");
                 return;
@@ -62,27 +67,27 @@ fn main() {
         }
         i += 1;
     }
-    
+
     // Expand ~ in paths
     if source.starts_with("~") {
         if let Ok(home) = std::env::var("HOME") {
             source = PathBuf::from(home).join(source.strip_prefix("~").unwrap());
         }
     }
-    
+
     if !source.exists() {
         eprintln!("Error: Source directory not found: {:?}", source);
         std::process::exit(1);
     }
-    
+
     let config = ExporterConfig {
         min_quality,
         max_files,
         hash_salt: "hanzo".to_string(),
     };
-    
+
     let mut exporter = ConversationExporter::with_config(config);
-    
+
     match exporter.export(&source, &output) {
         Ok(output_file) => {
             println!("\nDataset ready for training!");

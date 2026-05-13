@@ -1,7 +1,7 @@
 //! Core types for Hanzo Security
 
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Privacy tiers for agent execution
@@ -10,16 +10,16 @@ use uuid::Uuid;
 pub enum PrivacyTier {
     /// Tier 0: Open - No privacy guarantees, suitable for public data
     Open = 0,
-    
+
     /// Tier 1: At-rest encryption with SIM/FileVault
     AtRest = 1,
-    
+
     /// Tier 2: CPU TEE (SEV-SNP, TDX)
     CpuTee = 2,
-    
+
     /// Tier 3: CPU TEE + GPU Confidential Computing (H100 CC)
     GpuCc = 3,
-    
+
     /// Tier 4: GPU TEE-I/O (Blackwell) - Maximum privacy
     GpuTeeIo = 4,
 }
@@ -28,7 +28,7 @@ impl PrivacyTier {
     pub fn requires_attestation(&self) -> bool {
         *self >= PrivacyTier::CpuTee
     }
-    
+
     pub fn requires_kbs(&self) -> bool {
         *self >= PrivacyTier::CpuTee
     }
@@ -44,30 +44,24 @@ pub enum AttestationType {
         vcek_cert: Vec<u8>,
         platform_cert_chain: Vec<u8>,
     },
-    
+
     /// Intel TDX attestation
-    Tdx {
-        quote: Vec<u8>,
-        collateral: Vec<u8>,
-    },
-    
+    Tdx { quote: Vec<u8>, collateral: Vec<u8> },
+
     /// NVIDIA H100 Confidential Computing
     H100Cc {
         gpu_attestation: Vec<u8>,
         cpu_attestation: Box<AttestationType>,
     },
-    
+
     /// NVIDIA Blackwell TEE-I/O
     BlackwellTeeIo {
         tee_io_report: Vec<u8>,
         mig_config: Option<MigConfiguration>,
     },
-    
+
     /// SIM card attestation
-    SimEid {
-        eid: String,
-        signature: Vec<u8>,
-    },
+    SimEid { eid: String, signature: Vec<u8> },
 }
 
 /// MIG (Multi-Instance GPU) configuration for Blackwell
@@ -83,10 +77,10 @@ pub struct MigConfiguration {
 pub enum NodeSecurityMode {
     /// Software only - no hardware security
     SoftwareOnly,
-    
+
     /// SIM card security only
     SimOnly,
-    
+
     /// SIM + TEE security
     SimTee,
 }

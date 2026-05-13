@@ -42,7 +42,7 @@ impl AttestationResult {
 pub trait AttestationVerifier: Send + Sync {
     /// Verify an attestation and return the result
     async fn verify_attestation(&self, attestation: &AttestationType) -> Result<AttestationResult>;
-    
+
     /// Check if a measurement is in the allowed list
     async fn is_measurement_allowed(&self, measurement: &[u8]) -> bool;
 }
@@ -59,13 +59,11 @@ impl AttestationVerifier for MockAttestationVerifier {
                 Ok(AttestationResult {
                     verified: !report.is_empty(),
                     max_tier: PrivacyTier::CpuTee,
-                    measurements: vec![
-                        Measurement {
-                            name: "kernel".to_string(),
-                            value: vec![0xAA; 32],
-                            pcr_index: Some(0),
-                        },
-                    ],
+                    measurements: vec![Measurement {
+                        name: "kernel".to_string(),
+                        value: vec![0xAA; 32],
+                        pcr_index: Some(0),
+                    }],
                     platform_info: PlatformInfo {
                         platform_type: "AMD SEV-SNP".to_string(),
                         tcb_version: "1.0.0".to_string(),
@@ -90,15 +88,18 @@ impl AttestationVerifier for MockAttestationVerifier {
                     expires_at: chrono::Utc::now() + chrono::Duration::hours(1),
                 })
             }
-            AttestationType::H100Cc { gpu_attestation, cpu_attestation } => {
+            AttestationType::H100Cc {
+                gpu_attestation,
+                cpu_attestation,
+            } => {
                 // Verify CPU attestation first
                 let cpu_result = self.verify_attestation(cpu_attestation).await?;
                 if !cpu_result.verified {
                     return Err(SecurityError::InvalidAttestation(
-                        "CPU attestation failed".to_string()
+                        "CPU attestation failed".to_string(),
                     ));
                 }
-                
+
                 // Mock GPU CC verification
                 Ok(AttestationResult {
                     verified: !gpu_attestation.is_empty(),
@@ -113,7 +114,10 @@ impl AttestationVerifier for MockAttestationVerifier {
                     expires_at: chrono::Utc::now() + chrono::Duration::hours(1),
                 })
             }
-            AttestationType::BlackwellTeeIo { tee_io_report, mig_config } => {
+            AttestationType::BlackwellTeeIo {
+                tee_io_report,
+                mig_config,
+            } => {
                 // Mock Blackwell TEE-I/O verification
                 Ok(AttestationResult {
                     verified: !tee_io_report.is_empty(),
@@ -125,7 +129,12 @@ impl AttestationVerifier for MockAttestationVerifier {
                         security_features: vec![
                             "TEE_IO".to_string(),
                             "SECURE_BOOT".to_string(),
-                            if mig_config.is_some() { "MIG_ISOLATION" } else { "FULL_GPU" }.to_string(),
+                            if mig_config.is_some() {
+                                "MIG_ISOLATION"
+                            } else {
+                                "FULL_GPU"
+                            }
+                            .to_string(),
                         ],
                         vendor_info: serde_json::json!({
                             "gpu_model": "Blackwell",
@@ -152,7 +161,7 @@ impl AttestationVerifier for MockAttestationVerifier {
             }
         }
     }
-    
+
     async fn is_measurement_allowed(&self, _measurement: &[u8]) -> bool {
         // Mock implementation - allow all measurements
         true
@@ -189,12 +198,19 @@ impl HanzoAttestationVerifier {
 impl AttestationVerifier for HanzoAttestationVerifier {
     async fn verify_attestation(&self, attestation: &AttestationType) -> Result<AttestationResult> {
         match attestation {
-            AttestationType::SevSnp { report, vcek_cert, platform_cert_chain } => {
+            AttestationType::SevSnp {
+                report: _,
+                vcek_cert: _,
+                platform_cert_chain: _,
+            } => {
                 // TODO: Implement actual SEV-SNP verification
                 // This would call AMD's attestation service or use a local verifier
                 todo!("Implement SEV-SNP verification")
             }
-            AttestationType::Tdx { quote, collateral } => {
+            AttestationType::Tdx {
+                quote: _,
+                collateral: _,
+            } => {
                 // TODO: Implement actual TDX verification
                 // This would use Intel's attestation libraries
                 todo!("Implement TDX verification")
@@ -213,11 +229,12 @@ impl AttestationVerifier for HanzoAttestationVerifier {
             }
         }
     }
-    
+
     async fn is_measurement_allowed(&self, measurement: &[u8]) -> bool {
         let hex_measurement = hex::encode(measurement);
-        self.config.allowed_measurements.iter().any(|allowed| {
-            allowed.values.contains(&hex_measurement)
-        })
+        self.config
+            .allowed_measurements
+            .iter()
+            .any(|allowed| allowed.values.contains(&hex_measurement))
     }
 }

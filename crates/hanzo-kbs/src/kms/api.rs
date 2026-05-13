@@ -1,11 +1,11 @@
 //! HTTP API for KMS operations
 
 use serde::{Deserialize, Serialize};
-use warp::{Filter, Rejection, Reply};
 use std::sync::Arc;
+use warp::{Filter, Rejection, Reply};
 
 use crate::kms::KeyManagementService;
-use crate::types::{KeyId, AgentDek, TenantKek};
+use crate::types::{AgentDek, KeyId, TenantKek};
 
 /// API request/response types
 #[derive(Debug, Serialize, Deserialize)]
@@ -71,37 +71,37 @@ pub fn kms_routes<K: KeyManagementService + Clone + Send + Sync + 'static>(
         .and(warp::body::json())
         .and(with_kms(kms.clone()))
         .and_then(handle_create_tenant_kek);
-    
+
     let create_agent_dek = warp::path!("keys" / "agent")
         .and(warp::post())
         .and(warp::body::json())
         .and(with_kms(kms.clone()))
         .and_then(handle_create_agent_dek);
-    
+
     let wrap_key = warp::path!("wrap")
         .and(warp::post())
         .and(warp::body::json())
         .and(with_kms(kms.clone()))
         .and_then(handle_wrap_key);
-    
+
     let rotate_key = warp::path!("rotate")
         .and(warp::post())
         .and(warp::body::json())
         .and(with_kms(kms.clone()))
         .and_then(handle_rotate_key);
-    
+
     let destroy_key = warp::path!("destroy")
         .and(warp::post())
         .and(warp::body::json())
         .and(with_kms(kms.clone()))
         .and_then(handle_destroy_key);
-    
+
     let get_audit_logs = warp::path!("audit")
         .and(warp::get())
         .and(warp::query())
         .and(with_kms(kms))
         .and_then(handle_get_audit_logs);
-    
+
     create_tenant_kek
         .or(create_agent_dek)
         .or(wrap_key)
@@ -146,9 +146,8 @@ async fn handle_wrap_key<K: KeyManagementService>(
     req: WrapKeyRequest,
     kms: Arc<K>,
 ) -> Result<impl Reply, Rejection> {
-    let key_data = base64::decode(&req.key_data_base64)
-        .map_err(|_| warp::reject::reject())?;
-    
+    let key_data = base64::decode(&req.key_data_base64).map_err(|_| warp::reject::reject())?;
+
     match kms.wrap_key(&key_data, &req.parent_key_id).await {
         Ok(wrapped) => Ok(warp::reply::json(&WrapKeyResponse {
             wrapped_key_base64: base64::encode(&wrapped),
@@ -178,7 +177,10 @@ async fn handle_destroy_key<K: KeyManagementService>(
     kms: Arc<K>,
 ) -> Result<impl Reply, Rejection> {
     match kms.destroy_key(&req.key_id).await {
-        Ok(()) => Ok(warp::reply::with_status("", warp::http::StatusCode::NO_CONTENT)),
+        Ok(()) => Ok(warp::reply::with_status(
+            "",
+            warp::http::StatusCode::NO_CONTENT,
+        )),
         Err(e) => {
             log::error!("Failed to destroy key: {}", e);
             Err(warp::reject::reject())
@@ -190,7 +192,10 @@ async fn handle_get_audit_logs<K: KeyManagementService>(
     req: GetAuditLogsRequest,
     kms: Arc<K>,
 ) -> Result<impl Reply, Rejection> {
-    match kms.get_audit_logs(req.start_time, req.end_time, req.filter).await {
+    match kms
+        .get_audit_logs(req.start_time, req.end_time, req.filter)
+        .await
+    {
         Ok(logs) => Ok(warp::reply::json(&logs)),
         Err(e) => {
             log::error!("Failed to get audit logs: {}", e);

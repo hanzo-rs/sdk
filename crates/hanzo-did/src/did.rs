@@ -316,13 +316,13 @@ impl DID {
         let identifier = self.get_identifier();
         vec![
             // Primary networks
-            DID::hanzo(identifier.clone()),    // did:hanzo:zeekay
-            DID::lux(identifier.clone()),      // did:lux:zeekay
-            DID::pars(identifier.clone()),     // did:pars:zeekay (Pars Network 494949)
-            DID::zoo(identifier.clone()),      // did:zoo:zeekay (Zoo Network 200200)
-            DID::ai(identifier.clone()),       // did:ai:zeekay (Hanzo AI 36963)
-            DID::sparkle(identifier.clone()),  // did:sparkle:zeekay (Sparkle Pony 36911)
-            DID::spc(identifier.clone()),      // did:spc:zeekay (SPC alias)
+            DID::hanzo(identifier.clone()),       // did:hanzo:zeekay
+            DID::lux(identifier.clone()),         // did:lux:zeekay
+            DID::pars(identifier.clone()),        // did:pars:zeekay (Pars Network 494949)
+            DID::zoo(identifier.clone()),         // did:zoo:zeekay (Zoo Network 200200)
+            DID::ai(identifier.clone()),          // did:ai:zeekay (Hanzo AI 36963)
+            DID::sparkle(identifier.clone()),     // did:sparkle:zeekay (Sparkle Pony 36911)
+            DID::spc(identifier.clone()),         // did:spc:zeekay (SPC alias)
             DID::sparklepony(identifier.clone()), // did:sparklepony:zeekay (SPC alias)
             // Native chain DIDs
             DID::eth(identifier.clone()),      // did:eth:zeekay
@@ -331,10 +331,10 @@ impl DID {
             DID::arbitrum(identifier.clone()), // did:arbitrum:zeekay
             DID::optimism(identifier.clone()), // did:optimism:zeekay
             // Local development
-            DID::hanzo_local(identifier.clone()),   // did:hanzo:local:zeekay
-            DID::lux_local(identifier.clone()),     // did:lux:local:zeekay
-            DID::pars_local(identifier.clone()),    // did:pars:local:zeekay
-            DID::zoo_local(identifier.clone()),     // did:zoo:local:zeekay
+            DID::hanzo_local(identifier.clone()), // did:hanzo:local:zeekay
+            DID::lux_local(identifier.clone()),   // did:lux:local:zeekay
+            DID::pars_local(identifier.clone()),  // did:pars:local:zeekay
+            DID::zoo_local(identifier.clone()),   // did:zoo:local:zeekay
             DID::sparkle_local(identifier.clone()), // did:sparkle:local:zeekay
             // Testnets
             DID::sepolia(identifier.clone()), // did:sepolia:zeekay
@@ -443,9 +443,9 @@ impl Network {
     /// Get the chain ID for EVM-compatible networks
     pub fn chain_id(&self) -> Option<u64> {
         match self {
-            Network::Hanzo => Some(36963),       // Hanzo Network (did:hanzo, did:ai)
-            Network::Lux => Some(96369),         // Lux Network
-            Network::Pars => Some(494949),       // Pars Network
+            Network::Hanzo => Some(36963), // Hanzo Network (did:hanzo, did:ai)
+            Network::Lux => Some(96369),   // Lux Network
+            Network::Pars => Some(494949), // Pars Network
             Network::SparklePony => Some(36911), // Sparkle Pony Chain (did:sparkle, did:spc, did:sparklepony)
             Network::Zoo => Some(200200),        // Zoo Network
             Network::Ethereum => Some(1),
@@ -455,7 +455,7 @@ impl Network {
             Network::Polygon => Some(137),
             Network::Arbitrum => Some(42161),
             Network::Optimism => Some(10),
-            Network::LuxFuji => Some(43113),     // Fuji testnet
+            Network::LuxFuji => Some(43113), // Fuji testnet
             _ => None,
         }
     }
@@ -516,7 +516,7 @@ impl FromStr for Network {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "hanzo" | "ai" => Ok(Network::Hanzo),  // did:hanzo and did:ai are same network
+            "hanzo" | "ai" => Ok(Network::Hanzo), // did:hanzo and did:ai are same network
             "lux" => Ok(Network::Lux),
             "pars" => Ok(Network::Pars),
             "sparkle" | "spc" | "sparklepony" => Ok(Network::SparklePony), // All three reserved for SPC
@@ -681,7 +681,10 @@ mod tests {
         assert_eq!(Network::SparklePony.chain_id(), Some(36911));
 
         // RPC endpoint
-        assert_eq!(Network::SparklePony.rpc_endpoint(), Some("https://rpc.sparklepony.xyz"));
+        assert_eq!(
+            Network::SparklePony.rpc_endpoint(),
+            Some("https://rpc.sparklepony.xyz")
+        );
 
         // All three are same entity
         assert!(sparkle_did.is_same_entity(&spc_did));
@@ -715,11 +718,20 @@ mod tests {
 
     #[test]
     fn test_network_rpc_endpoints() {
-        assert_eq!(Network::Pars.rpc_endpoint(), Some("https://rpc.pars.network"));
-        assert_eq!(Network::SparklePony.rpc_endpoint(), Some("https://rpc.sparklepony.xyz"));
+        assert_eq!(
+            Network::Pars.rpc_endpoint(),
+            Some("https://rpc.pars.network")
+        );
+        assert_eq!(
+            Network::SparklePony.rpc_endpoint(),
+            Some("https://rpc.sparklepony.xyz")
+        );
         assert_eq!(Network::Zoo.rpc_endpoint(), Some("https://rpc.zoo.network"));
         assert_eq!(Network::Hanzo.rpc_endpoint(), Some("https://rpc.hanzo.ai"));
-        assert_eq!(Network::Lux.rpc_endpoint(), Some("https://api.lux.network/ext/bc/C/rpc"));
+        assert_eq!(
+            Network::Lux.rpc_endpoint(),
+            Some("https://api.lux.network/ext/bc/C/rpc")
+        );
     }
 
     #[test]

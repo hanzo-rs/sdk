@@ -172,9 +172,7 @@ impl ConversationExporter {
 
     /// Anonymize file paths
     fn anonymize_path(&self, path: &str) -> String {
-        self.path_regex
-            .replace_all(path, "$1/user")
-            .into_owned()
+        self.path_regex.replace_all(path, "$1/user").into_owned()
     }
 
     /// Anonymize content (secrets, paths, etc.)
@@ -215,10 +213,7 @@ impl ConversationExporter {
                 let mut text_parts = Vec::new();
                 for item in arr {
                     if let serde_json::Value::Object(obj) = item {
-                        let item_type = obj
-                            .get("type")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("");
+                        let item_type = obj.get("type").and_then(|v| v.as_str()).unwrap_or("");
 
                         match item_type {
                             "text" => {
@@ -231,8 +226,12 @@ impl ConversationExporter {
                                     .get("name")
                                     .and_then(|v| v.as_str())
                                     .unwrap_or("unknown");
-                                *self.stats.tool_usage.entry(tool_name.to_string()).or_insert(0) += 1;
-                                
+                                *self
+                                    .stats
+                                    .tool_usage
+                                    .entry(tool_name.to_string())
+                                    .or_insert(0) += 1;
+
                                 let input = obj
                                     .get("input")
                                     .map(|v| serde_json::to_string(v).unwrap_or_default())
@@ -263,9 +262,10 @@ impl ConversationExporter {
                 .filter_map(|item| {
                     if let serde_json::Value::Object(obj) = item {
                         if obj.get("type").and_then(|v| v.as_str()) == Some("thinking") {
-                            return obj.get("thinking").and_then(|v| v.as_str()).map(|s| {
-                                self.anonymize_content(s)
-                            });
+                            return obj
+                                .get("thinking")
+                                .and_then(|v| v.as_str())
+                                .map(|s| self.anonymize_content(s));
                         }
                     }
                     None
@@ -310,7 +310,11 @@ impl ConversationExporter {
             score += 0.15;
             // Bonus for agentic tools
             let agentic = ["Task", "dispatch", "batch", "agent"];
-            if turn.tools_used.iter().any(|t| agentic.iter().any(|a| t.contains(a))) {
+            if turn
+                .tools_used
+                .iter()
+                .any(|t| agentic.iter().any(|a| t.contains(a)))
+            {
                 score += 0.1;
             }
         }
@@ -410,7 +414,11 @@ impl ConversationExporter {
                         if let Some(ref model) = msg.model {
                             if model != "<synthetic>" && turn.model.is_empty() {
                                 turn.model = model.clone();
-                                *self.stats.model_distribution.entry(model.clone()).or_insert(0) += 1;
+                                *self
+                                    .stats
+                                    .model_distribution
+                                    .entry(model.clone())
+                                    .or_insert(0) += 1;
                             }
                         }
 
@@ -472,7 +480,12 @@ impl ConversationExporter {
         let mut jsonl_files: Vec<PathBuf> = WalkDir::new(source_dir)
             .into_iter()
             .filter_map(|e| e.ok())
-            .filter(|e| e.path().extension().map(|ext| ext == "jsonl").unwrap_or(false))
+            .filter(|e| {
+                e.path()
+                    .extension()
+                    .map(|ext| ext == "jsonl")
+                    .unwrap_or(false)
+            })
             .map(|e| e.path().to_path_buf())
             .collect();
 
@@ -630,7 +643,7 @@ mod tests {
     #[test]
     fn test_anonymize_path() {
         let exporter = ConversationExporter::new();
-        
+
         assert_eq!(
             exporter.anonymize_path("/Users/john/work/project"),
             "/Users/user/work/project"
@@ -644,10 +657,10 @@ mod tests {
     #[test]
     fn test_anonymize_content() {
         let exporter = ConversationExporter::new();
-        
+
         let content = "My email is test@example.com and key is sk-abcdefghijklmnopqrstuvwxyz";
         let anonymized = exporter.anonymize_content(content);
-        
+
         assert!(anonymized.contains("email@example.com"));
         assert!(anonymized.contains("sk-REDACTED"));
         assert!(!anonymized.contains("test@example.com"));
@@ -656,7 +669,7 @@ mod tests {
     #[test]
     fn test_quality_calculation() {
         let exporter = ConversationExporter::new();
-        
+
         let mut turn = ConversationTurn {
             user: "Test".to_string(),
             assistant: "Response".to_string(),
