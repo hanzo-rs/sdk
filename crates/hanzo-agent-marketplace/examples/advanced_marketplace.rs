@@ -87,7 +87,7 @@ fn main() {
         Some(ServiceRequestOptions::new().requires_tee(true)),
     );
 
-    let secure_matches = marketplace.get_matches_for_agent("agent_secure");
+    let _secure_matches = marketplace.get_matches_for_agent("agent_secure");
     println!("✓ Matched with: SecureBot (has TEE)");
     println!("  Regular offers filtered out\n");
 
@@ -96,7 +96,7 @@ fn main() {
     println!("--------------------------------");
 
     // Build reputation for an agent
-    let offer_id = marketplace.post_offer(
+    let _offer_id = marketplace.post_offer(
         "agent_expert",
         "ExpertBot",
         ServiceType::Coding,
@@ -105,7 +105,7 @@ fn main() {
         None,
     );
 
-    let request_id = marketplace.post_request(
+    let _request_id = marketplace.post_request(
         "user_3",
         "Eve",
         ServiceType::Coding,
@@ -146,7 +146,7 @@ fn main() {
         Some(ServiceRequestOptions::new().min_reputation(0.55)), // Requires good reputation
     );
 
-    let high_rep_matches = marketplace.get_matches_for_agent("agent_expert");
+    let _high_rep_matches = marketplace.get_matches_for_agent("agent_expert");
     println!("✓ High-reputation request matched with ExpertBot\n");
 
     // Scenario 4: Duration constraints
