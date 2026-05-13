@@ -27,16 +27,13 @@ async-trait = { workspace = true }
 tokio = { workspace = true }
 reqwest = { workspace = true }
 
-# For Ethereum compatibility
-ethers-core = { version = "2.0", optional = true }
-
-# For IPFS support
-ipfs-api-backend-hyper = { version = "0.6", optional = true }
+# Ethereum compatibility removed — ethers-rs unmaintained. Use alloy in
+# consumers if you need EVM types.
+# IPFS support removed — ipfs-api-backend-hyper transitively pulls yanked
+# core2 0.4.0 via multihash 0.17.
 
 [features]
-default = ["ethereum", "ipfs"]
-ethereum = ["ethers-core"]
-ipfs = ["ipfs-api-backend-hyper"]
+default = []
 
 [dev-dependencies]
 tokio-test = { workspace = true }
