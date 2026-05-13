@@ -35,8 +35,6 @@ members = [
     # ===========================================
     # "crates/hanzo-messages",        # has deep dependencies
     # "crates/hanzo-embedding",       # has blocking reqwest issues
-    # "crates/hanzo-llm",             # depends on sqlite
-    # "crates/hanzo-hmm",             # ML-specific
     # "crates/hanzo-kbs",             # depends on identity chain
     # "crates/hanzo-identity",        # depends on runtime
     # "crates/hanzo-libp2p",          # depends on identity
@@ -58,8 +56,6 @@ exclude = [
     "crates/hanzo-kbs",
     "crates/hanzo-messages",
     "crates/hanzo-embedding",
-    "crates/hanzo-llm",
-    "crates/hanzo-hmm",
     "crates/hanzo-identity",
     "crates/hanzo-libp2p",
     "crates/hanzo-libp2p-relayer",
@@ -248,8 +244,6 @@ hanzo-guard = { path = "./crates/hanzo-guard" }
 hanzo-agent = { path = "./crates/hanzo-agent" }
 hanzo-agent-proxy = { path = "./crates/hanzo-agent-proxy" }
 hanzo-agents = { path = "./crates/hanzo-agents" }
-hanzo-llm = { path = "./crates/hanzo-llm" }
-hanzo-hmm = { path = "./crates/hanzo-hmm" }
 hanzo-model-discovery = { path = "./crates/hanzo-model-discovery" }
 
 # Runtime
