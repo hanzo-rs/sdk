@@ -44,7 +44,7 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/hanzoai/rust-sdk"
 homepage = "https://hanzo.ai"
 documentation = "https://docs.rs/hanzo-*"
-rust-version = "1.85"  # rmcp 0.8+ uses edition2024, which requires Rust 1.85+
+rust-version = "1.88"  # bumped from 1.85: icu_provider 2.2 needs 1.86, time 0.3.47 needs 1.88
 
 [workspace.dependencies]
 # Async runtime
@@ -117,7 +117,7 @@ regex = "1"
 walkdir = "2"
 dirs = "5.0"
 tempfile = "3.19"
-home = "=0.5.11"  # Pinned: 0.5.12 requires Rust 1.88, our MSRV is 1.85
+home = "0.5"
 os_path = "0.8"
 csv = "1.3"
 keyphrases = "0.3"
