@@ -1,14 +1,15 @@
 [package]
 name = "hanzo-kbs"
-description = "Hanzo AI - Kbs Library"
-license = "MIT"
-version = "1.1.12"
-edition = "2021"
-authors = ["Hanzo AI <dev@hanzo.ai>"]
-
-# Make this a standalone crate (not part of parent workspace)
-# This crate is disabled in CI due to external dependencies
-[workspace]
+description = "Hanzo AI - Key Broker Service (KMS + attestation + post-quantum vault)"
+license.workspace = true
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords = ["kms", "kbs", "attestation", "pqc", "tee"]
+categories = ["cryptography", "authentication"]
 
 [features]
 default = ["pqc"]
@@ -18,36 +19,38 @@ integration-tests = ["pqc"]
 
 [dependencies]
 # Core dependencies
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-async-trait = "0.1"
-anyhow = "1.0"
-thiserror = "2.0"
-chrono = { version = "0.4", features = ["serde"] }
-tokio = { version = "1.45", features = ["full"] }
-log = "0.4"
-dashmap = "6"
-rand = "0.9"
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+chrono = { workspace = true, features = ["serde"] }
+tokio = { workspace = true }
+log = { workspace = true }
+dashmap = { workspace = true }
+rand = { workspace = true }
 
 # Cryptography
-hpke = "0.12"
-chacha20poly1305 = "0.10"
-x25519-dalek = { version = "2.0", features = ["static_secrets"] }
-ed25519-dalek = { version = "2.1", features = ["rand_core", "serde"] }
-blake3 = "1.8"
-hex = "0.4"
+hpke = { workspace = true }
+chacha20poly1305 = { workspace = true }
+x25519-dalek = { workspace = true }
+ed25519-dalek = { workspace = true, features = ["rand_core", "serde"] }
+blake3 = { workspace = true }
+hex = { workspace = true }
 
 # For attestation
-base64 = "0.22"
-bincode = "1.3"
-uuid = { version = "1.11", features = ["v4", "serde"] }
+base64 = { workspace = true }
+bincode = { workspace = true }
+uuid = { workspace = true, features = ["v4", "serde"] }
 
 # Hanzo dependencies
-hanzo-messages = { version = "1.1.12", path = "../hanzo-messages" }
-hanzo-pqc = { version = "1.1", path = "../hanzo-pqc", optional = true }
+hanzo-pqc = { workspace = true, optional = true }
 
 # API dependencies
-warp = "0.3"
+warp = { workspace = true }
 
 [dev-dependencies]
-tokio-test = "0.4"
+tokio-test = { workspace = true }
+
+[lints]
+workspace = true

@@ -4,15 +4,10 @@ use async_trait::async_trait;
 
 use lazy_static::lazy_static;
 
-use reqwest::blocking::Client;
-
 use reqwest::Client as AsyncClient;
 use reqwest::ClientBuilder;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-
-// TODO: remove duplicate methods
-// TODO: remove blocking / non-blocking methods
 
 lazy_static! {
     pub static ref DEFAULT_EMBEDDINGS_SERVER_URL: &'static str = "https://api.hanzo.ai/embeddings";
@@ -20,49 +15,27 @@ lazy_static! {
 }
 
 /// A trait for types that can generate embeddings from text.
+///
+/// Async-only by design — one way to do it. Use `tokio::task::block_in_place`
+/// or `Runtime::block_on` at the call site if a sync facade is needed.
 #[async_trait]
 pub trait EmbeddingGenerator: Sync + Send {
     fn model_type(&self) -> EmbeddingModelType;
     fn set_model_type(&mut self, model_type: EmbeddingModelType);
     fn box_clone(&self) -> Box<dyn EmbeddingGenerator>;
 
-    /// Generates an embedding from the given input string, and assigns the
-    /// provided id.
-    fn generate_embedding_blocking(&self, input_string: &str) -> Result<Vec<f32>, HanzoEmbeddingError>;
-
-    /// Generate an Embedding for an input string, sets id to a default value
-    /// of empty string.
-    fn generate_embedding_default_blocking(&self, input_string: &str) -> Result<Vec<f32>, HanzoEmbeddingError> {
-        self.generate_embedding_blocking(input_string)
-    }
-
-    /// Generates embeddings from the given list of input strings and ids.
-    fn generate_embeddings_blocking(&self, input_strings: &Vec<String>)
-        -> Result<Vec<Vec<f32>>, HanzoEmbeddingError>;
-
-    /// Generate Embeddings for a list of input strings, sets ids to default.
-    fn generate_embeddings_blocking_default(
-        &self,
-        input_strings: &Vec<String>,
-    ) -> Result<Vec<Vec<f32>>, HanzoEmbeddingError> {
-        self.generate_embeddings_blocking(input_strings)
-    }
-
-    /// Generates an embedding from the given input string, and assigns the
-    /// provided id.
+    /// Generate an embedding for a single input string.
     async fn generate_embedding(&self, input_string: &str) -> Result<Vec<f32>, HanzoEmbeddingError>;
 
-    /// Generate an Embedding for an input string, sets id to a default value
-    /// of empty string.
+    /// Generate an embedding for a single input string with default id.
     async fn generate_embedding_default(&self, input_string: &str) -> Result<Vec<f32>, HanzoEmbeddingError> {
         self.generate_embedding(input_string).await
     }
-    // ### TODO: remove all these duplicate methods
 
-    /// Generates embeddings from the given list of input strings and ids.
+    /// Generate embeddings for a batch of input strings.
     async fn generate_embeddings(&self, input_strings: &Vec<String>) -> Result<Vec<Vec<f32>>, HanzoEmbeddingError>;
 
-    /// Generate Embeddings for a list of input strings, sets ids to default
+    /// Generate embeddings for a batch with default ids.
     async fn generate_embeddings_default(
         &self,
         input_strings: &Vec<String>,
@@ -84,49 +57,6 @@ impl EmbeddingGenerator for RemoteEmbeddingGenerator {
     /// Clones self and wraps it in a Box
     fn box_clone(&self) -> Box<dyn EmbeddingGenerator> {
         Box::new(self.clone())
-    }
-
-    /// Generate Embeddings for an input list of strings by using the external API.
-    /// This method batch generates whenever possible to increase speed.
-    /// Note this method is blocking.
-    fn generate_embeddings_blocking(
-        &self,
-        input_strings: &Vec<String>,
-    ) -> Result<Vec<Vec<f32>>, HanzoEmbeddingError> {
-        let input_strings: Vec<String> = input_strings
-            .iter()
-            .map(|s| s.chars().take(self.model_type.max_input_token_count()).collect())
-            .collect();
-
-        match self.model_type {
-            EmbeddingModelType::OllamaTextEmbeddingsInference(_) => {
-                let mut embeddings = Vec::new();
-                for input_string in input_strings.iter() {
-                    let embedding = self.generate_embedding_ollama_blocking(input_string)?;
-                    embeddings.push(embedding);
-                }
-                Ok(embeddings)
-            }
-        }
-    }
-
-    /// Generate an Embedding for an input string by using the external API.
-    /// Note this method is blocking.
-    fn generate_embedding_blocking(&self, input_string: &str) -> Result<Vec<f32>, HanzoEmbeddingError> {
-        let input_strings = [input_string.to_string()];
-        let input_strings: Vec<String> = input_strings
-            .iter()
-            .map(|s| s.chars().take(self.model_type.max_input_token_count()).collect())
-            .collect();
-
-        let results = self.generate_embeddings_blocking(&input_strings)?;
-        if results.is_empty() {
-            Err(HanzoEmbeddingError::FailedEmbeddingGeneration(
-                "No results returned from the embedding generation".to_string(),
-            ))
-        } else {
-            Ok(results[0].clone())
-        }
     }
 
     /// Generate an Embedding for an input string by using the external API.
@@ -320,48 +250,6 @@ impl RemoteEmbeddingGenerator {
                     }
                 }
             }
-        }
-    }
-
-    /// Generate an Embedding for an input string by using the external Ollama API.
-    fn generate_embedding_ollama_blocking(&self, input_string: &str) -> Result<Vec<f32>, HanzoEmbeddingError> {
-        // Prepare the request body
-        let request_body = OllamaEmbeddingsRequestBody {
-            model: self.model_type.to_string(),
-            prompt: String::from(input_string),
-        };
-
-        // Create the HTTP client
-        let client = Client::new();
-
-        // Build the request
-        let mut request = client
-            .post(&format!("{}", self.ollama_endpoint_url()))
-            .header("Content-Type", "application/json")
-            .json(&request_body);
-
-        // Add the API key to the header if it's available
-        if let Some(api_key) = &self.api_key {
-            request = request.header("Authorization", format!("Bearer {}", api_key));
-        }
-
-        // Send the request and check for errors
-        let response = request.send().map_err(|err| {
-            // Handle any HTTP client errors here (e.g., request creation failure)
-            HanzoEmbeddingError::RequestFailed(format!("HTTP request failed: {}", err))
-        })?;
-
-        // Check if the response is successful
-        if response.status().is_success() {
-            let embedding_response: OllamaEmbeddingsResponse = response.json().map_err(|err| {
-                HanzoEmbeddingError::RequestFailed(format!("Failed to deserialize response JSON: {}", err))
-            })?;
-            Ok(embedding_response.embedding)
-        } else {
-            Err(HanzoEmbeddingError::RequestFailed(format!(
-                "HTTP request failed with status: {}",
-                response.status()
-            )))
         }
     }
 

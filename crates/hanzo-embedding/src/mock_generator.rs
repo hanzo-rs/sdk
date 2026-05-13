@@ -32,17 +32,6 @@ impl EmbeddingGenerator for MockGenerator {
         Box::new((*self).clone())
     }
 
-    fn generate_embedding_blocking(&self, _input_string: &str) -> Result<Vec<f32>, HanzoEmbeddingError> {
-        Ok(vec![0.0; self.num_embeddings])
-    }
-
-    fn generate_embeddings_blocking(
-        &self,
-        input_strings: &Vec<String>,
-    ) -> Result<Vec<Vec<f32>>, HanzoEmbeddingError> {
-        Ok(input_strings.iter().map(|_| vec![0.0; self.num_embeddings]).collect())
-    }
-
     async fn generate_embedding(&self, _input_string: &str) -> Result<Vec<f32>, HanzoEmbeddingError> {
         Ok(vec![0.0; self.num_embeddings])
     }

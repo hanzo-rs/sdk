@@ -24,53 +24,16 @@ members = [
     # AI/ML - Agents (SHARED FOR DEV/NODE INTEGRATION)
     "crates/hanzo-agent",            # Agent framework - key for tool calling
     "crates/hanzo-agent-proxy",      # Multi-backend OpenAI-compatible API proxy
+    "crates/hanzo-agent-marketplace", # Decentralized agent service marketplace
     "crates/hanzo-mcp-core",         # MCP core traits and types
     "crates/hanzo-mcp-client",       # MCP client (connects to servers)
     "crates/hanzo-mcp-server",       # MCP server (exposes tools)
     "crates/hanzo-mcp",              # Unified MCP re-export crate
     "crates/hanzo-agents",           # Specialized agents (architect, cto, reviewer, etc.)
 
-    # ===========================================
-    # DISABLED - Need refactoring for clean separation
-    # ===========================================
-    # "crates/hanzo-messages",        # has deep dependencies
-    # "crates/hanzo-embedding",       # has blocking reqwest issues
-    # "crates/hanzo-kbs",             # depends on identity chain
-    # "crates/hanzo-identity",        # depends on runtime
-    # "crates/hanzo-libp2p",          # depends on identity
-    # "crates/hanzo-libp2p-relayer",
-    # "crates/hanzo-compute",
-    # "crates/hanzo-database",
-    # "crates/hanzo-ai-format",
-    # "crates/hanzo-wasm",
-    # "crates/hanzo-tools-runner",
-    # "crates/hanzo-mining",
-    # "crates/hanzo-agent-marketplace",
-    # "crates/hanzo-baml",
-    # "crates/hanzo-db",
-    # "crates/hanzo-simulation",
-    # "crates/hanzo-sqlite",
-]
-# Explicitly exclude disabled crates that may have Cargo.toml files
-exclude = [
-    "crates/hanzo-kbs",
-    "crates/hanzo-messages",
-    "crates/hanzo-embedding",
-    "crates/hanzo-identity",
-    "crates/hanzo-libp2p",
-    "crates/hanzo-libp2p-relayer",
-    "crates/hanzo-compute",
-    "crates/hanzo-database",
-    "crates/hanzo-ai-format",
-    "crates/hanzo-wasm",
-    "crates/hanzo-tools-runner",
-    "crates/hanzo-mining",
-    "crates/hanzo-agent-marketplace",
-    "crates/hanzo-baml",
-    "crates/hanzo-db",
-    "crates/hanzo-simulation",
-    "crates/hanzo-sqlite",
-    "crates/hanzo-crypto-identities",
+    # Embedding / KMS
+    "crates/hanzo-embedding",        # Embedding generators (native + remote)
+    "crates/hanzo-kbs",              # Key Broker Service (KMS + attestation)
 ]
 
 [workspace.package]
@@ -208,21 +171,13 @@ tokio-test = "0.4"
 # ============================================
 
 # Core - Crypto & Security
-hanzo-pqc = { path = "./crates/hanzo-pqc" }
-hanzo-crypto = { path = "./crates/hanzo-crypto" }
-hanzo-crypto-identities = { path = "./crates/hanzo-crypto-identities" }
-hanzo-kbs = { path = "./crates/hanzo-kbs" }
+hanzo-pqc = { version = "1.1.21", path = "./crates/hanzo-pqc" }
+hanzo-crypto = { version = "1.1.21", path = "./crates/hanzo-crypto" }
+hanzo-kbs = { version = "1.1.21", path = "./crates/hanzo-kbs" }
 
 # Core - Identity & Messages
-hanzo-did = { path = "./crates/hanzo-did" }
-hanzo-identity = { path = "./crates/hanzo-identity" }
-hanzo-messages = { path = "./crates/hanzo-messages" }
-hanzo-message-primitives = { path = "./crates/hanzo-message-primitives" }
-
-# Network
-hanzo-libp2p = { path = "./crates/hanzo-libp2p" }
-hanzo-libp2p-relayer = { path = "./crates/hanzo-libp2p-relayer" }
-hanzo-compute = { path = "./crates/hanzo-compute" }
+hanzo-did = { version = "1.1.21", path = "./crates/hanzo-did" }
+hanzo-message-primitives = { version = "1.1.21", path = "./crates/hanzo-message-primitives" }
 
 # MCP - Model Context Protocol (unified)
 hanzo-mcp-core = { version = "1.1.21", path = "./crates/hanzo-mcp-core" }
@@ -230,12 +185,9 @@ hanzo-mcp-client = { version = "1.1.21", path = "./crates/hanzo-mcp-client" }
 hanzo-mcp-server = { version = "1.1.21", path = "./crates/hanzo-mcp-server" }
 hanzo-mcp = { version = "1.1.21", path = "./crates/hanzo-mcp" }
 
-# Data
-hanzo-config = { path = "./crates/hanzo-config" }
-hanzo-database = { path = "./crates/hanzo-database" }
-hanzo-ai-format = { path = "./crates/hanzo-ai-format" }
-hanzo-embedding = { path = "./crates/hanzo-embedding" }
-hanzo-sqlite = { path = "./crates/hanzo-sqlite" }
+# Data / Storage
+hanzo-config = { version = "1.1.21", path = "./crates/hanzo-config" }
+hanzo-embedding = { version = "1.1.21", path = "./crates/hanzo-embedding" }
 
 # Security & Safety
 hanzo-guard = { version = "0.1.4", path = "./crates/hanzo-guard" }
@@ -243,15 +195,9 @@ hanzo-guard = { version = "0.1.4", path = "./crates/hanzo-guard" }
 # AI/ML
 hanzo-agent = { version = "1.1.21", path = "./crates/hanzo-agent" }
 hanzo-agent-proxy = { version = "1.1.21", path = "./crates/hanzo-agent-proxy" }
+hanzo-agent-marketplace = { version = "1.1.21", path = "./crates/hanzo-agent-marketplace" }
 hanzo-agents = { version = "1.1.21", path = "./crates/hanzo-agents" }
-hanzo-model-discovery = { path = "./crates/hanzo-model-discovery" }
-
-# Runtime
-hanzo-wasm = { path = "./crates/hanzo-wasm" }
-hanzo-tools-runner = { path = "./crates/hanzo-tools-runner" }
-
-# Consensus
-hanzo-mining = { path = "./crates/hanzo-mining" }
+hanzo-model-discovery = { version = "1.1.21", path = "./crates/hanzo-model-discovery" }
 
 [profile.release]
 lto = true
