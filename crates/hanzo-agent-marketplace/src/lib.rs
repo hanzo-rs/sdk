@@ -108,7 +108,7 @@ impl AgentMarketplace {
         price_eth: f64,
         options: Option<ServiceOfferOptions>,
     ) -> String {
-        let offer_id = format!("offer_{}", Uuid::new_v4().simple().to_string()[..8].to_string());
+        let offer_id = format!("offer_{}", &Uuid::new_v4().simple().to_string()[..8]);
         let opts = options.unwrap_or_default();
 
         let offer = ServiceOffer {
@@ -155,7 +155,7 @@ impl AgentMarketplace {
         max_price_eth: f64,
         options: Option<ServiceRequestOptions>,
     ) -> String {
-        let request_id = format!("request_{}", Uuid::new_v4().simple().to_string()[..8].to_string());
+        let request_id = format!("request_{}", &Uuid::new_v4().simple().to_string()[..8]);
         let opts = options.unwrap_or_default();
 
         let request = ServiceRequest {
@@ -226,7 +226,7 @@ impl AgentMarketplace {
 
     /// Create a match between offer and request
     fn create_match(&self, offer: ServiceOffer, request: ServiceRequest) {
-        let match_id = format!("match_{}", Uuid::new_v4().simple().to_string()[..8].to_string());
+        let match_id = format!("match_{}", &Uuid::new_v4().simple().to_string()[..8]);
 
         // Agreed price is the offer price (could implement negotiation)
         let agreed_price = offer.price_eth;
