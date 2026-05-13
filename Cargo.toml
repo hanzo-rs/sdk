@@ -197,7 +197,6 @@ hanzo-agent = { version = "1.1.21", path = "./crates/hanzo-agent" }
 hanzo-agent-proxy = { version = "1.1.21", path = "./crates/hanzo-agent-proxy" }
 hanzo-agent-marketplace = { version = "1.1.21", path = "./crates/hanzo-agent-marketplace" }
 hanzo-agents = { version = "1.1.21", path = "./crates/hanzo-agents" }
-hanzo-model-discovery = { version = "1.1.21", path = "./crates/hanzo-model-discovery" }
 
 [profile.release]
 lto = true
