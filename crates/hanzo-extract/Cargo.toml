@@ -33,7 +33,7 @@ scraper = { version = "0.22", optional = true }
 lopdf = { version = "0.34", optional = true }
 
 # Sanitization
-hanzo-guard = { path = "../hanzo-guard", optional = true }
+hanzo-guard = { workspace = true, optional = true }
 
 # Conversation extraction
 walkdir = { version = "2.5", optional = true }

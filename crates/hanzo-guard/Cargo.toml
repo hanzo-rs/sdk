@@ -1,11 +1,11 @@
 [package]
 name = "hanzo-guard"
-version = "0.1.0"
+version = "0.1.4"
 edition = "2021"
 authors = ["Hanzo AI <dev@hanzo.ai>"]
 description = "LLM I/O sanitization and safety layer - the 'condom' for AI"
 license = "MIT"
-repository = "https://github.com/hanzoai/guard"
+repository = "https://github.com/hanzoai/rust-sdk"
 keywords = ["llm", "safety", "sanitization", "guardrails", "security"]
 categories = ["development-tools", "web-programming"]
 

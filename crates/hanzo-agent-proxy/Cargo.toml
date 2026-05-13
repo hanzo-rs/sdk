@@ -8,7 +8,7 @@ repository.workspace = true
 homepage.workspace = true
 rust-version.workspace = true
 description = "Multi-backend OpenAI-compatible API proxy for AI agents and CLIs"
-keywords = ["ai", "llm", "proxy", "openai", "anthropic", "agents"]
+keywords = ["ai", "llm", "proxy", "openai", "anthropic"]
 categories = ["api-bindings", "asynchronous", "network-programming"]
 
 [[bin]]
