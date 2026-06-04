@@ -60,7 +60,7 @@ saorsa-pqc = "0.3"
 rmcp = { version = "0.8", features = ["client", "server", "macros", "transport-child-process", "transport-streamable-http-client-reqwest", "transport-sse-client-reqwest"] }
 
 # Math (used by hanzo-embedding for cosine similarity etc.)
-rand = "0.8"
+rand = "0.10"
 
 # Time / utilities
 chrono = { version = "0.4", features = ["serde"] }
