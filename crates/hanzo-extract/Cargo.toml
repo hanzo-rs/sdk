@@ -40,7 +40,7 @@ walkdir = { version = "2.5", optional = true }
 sha2 = { version = "0.10", optional = true }
 hex = { version = "0.4", optional = true }
 chrono = { version = "0.4", optional = true }
-rand = { version = "0.8", optional = true }
+rand = { version = "0.10", optional = true }
 
 # URL handling
 url = "2.5"
