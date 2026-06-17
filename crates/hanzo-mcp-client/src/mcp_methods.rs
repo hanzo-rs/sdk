@@ -3,9 +3,9 @@ use crate::{command::CommandWrappedInShellBuilder, error::McpError, utils::disec
 type Result<T> = std::result::Result<T, McpError>;
 use rmcp::{
     model::{
-        CallToolRequestParam, CallToolResult, ClientCapabilities, ClientInfo, Implementation, Tool,
+        CallToolRequestParams, CallToolResult, ClientCapabilities, ClientInfo, Implementation, Tool,
     },
-    transport::{SseClientTransport, StreamableHttpClientTransport, TokioChildProcess},
+    transport::{StreamableHttpClientTransport, TokioChildProcess},
     ServiceExt,
 };
 use std::collections::HashMap;
@@ -57,24 +57,13 @@ pub async fn list_tools_via_sse(
     sse_url: &str,
     _config: Option<HashMap<String, String>>,
 ) -> Result<Vec<Tool>> {
-    // TODO: The config parameter is not currently used by SseTransport or ClientInfo setup in the example.
-    // It might be used in the future for authentication headers or other SSE-specific configurations.
-    let transport = SseClientTransport::start(sse_url)
-        .await
-        .map_err(|e| McpError {
-            message: format!("{}", e),
-        })?;
-    let client_info = ClientInfo {
-        protocol_version: Default::default(),
-        capabilities: ClientCapabilities::default(),
-        client_info: Implementation {
-            name: "hanzo_node_sse_client".to_string(),
-            version: env!("CARGO_PKG_VERSION").to_string(),
-            title: None,
-            icons: None,
-            website_url: None,
-        },
-    };
+    // The SSE client transport was removed in rmcp 1.x; the SSE endpoint is served
+    // over the Streamable HTTP transport, which parses SSE-formatted responses.
+    let transport = StreamableHttpClientTransport::from_uri(sse_url);
+    let client_info = ClientInfo::new(
+        ClientCapabilities::default(),
+        Implementation::new("hanzo_node_sse_client", env!("CARGO_PKG_VERSION")),
+    );
     let client = client_info.serve(transport).await.map_err(|e| McpError {
         message: format!("SSE client connection error: {:?}", e),
     })?;
@@ -104,17 +93,10 @@ pub async fn list_tools_via_http(
     // TODO: The config parameter is not currently used by SseTransport or ClientInfo setup in the example.
     // It might be used in the future for authentication headers or other SSE-specific configurations.
     let transport = StreamableHttpClientTransport::from_uri(sse_url);
-    let client_info = ClientInfo {
-        protocol_version: Default::default(),
-        capabilities: ClientCapabilities::default(),
-        client_info: Implementation {
-            name: "hanzo_node_http_client".to_string(),
-            version: env!("CARGO_PKG_VERSION").to_string(),
-            title: None,
-            icons: None,
-            website_url: None,
-        },
-    };
+    let client_info = ClientInfo::new(
+        ClientCapabilities::default(),
+        Implementation::new("hanzo_node_http_client", env!("CARGO_PKG_VERSION")),
+    );
     let client = client_info.serve(transport).await.map_err(|e| McpError {
         message: format!("HTTP client connection error: {:?}", e),
     })?;
@@ -174,10 +156,7 @@ pub async fn run_tool_via_command(
     service.peer_info();
 
     let call_tool_result = service
-        .call_tool(CallToolRequestParam {
-            name: tool.into(),
-            arguments: Some(parameters),
-        })
+        .call_tool(CallToolRequestParams::new(tool).with_arguments(parameters))
         .await;
 
     let _ = service
@@ -194,24 +173,14 @@ pub async fn run_tool_via_sse(
     tool: String,
     parameters: serde_json::Map<String, serde_json::Value>,
 ) -> Result<CallToolResult> {
-    let transport = SseClientTransport::start(url)
-        .await
-        .inspect_err(|e| log::error!("error starting sse transport: {:?}", e))
-        .map_err(|e| McpError {
-            message: format!("{}", e),
-        })?;
+    // SSE client transport removed in rmcp 1.x; serve the SSE endpoint over
+    // the Streamable HTTP transport.
+    let transport = StreamableHttpClientTransport::from_uri(url);
 
-    let client_info = ClientInfo {
-        protocol_version: Default::default(),
-        capabilities: ClientCapabilities::default(),
-        client_info: Implementation {
-            name: "Hanzo Node Client".to_string(),
-            version: "0.0.1".to_string(),
-            title: None,
-            icons: None,
-            website_url: None,
-        },
-    };
+    let client_info = ClientInfo::new(
+        ClientCapabilities::default(),
+        Implementation::new("Hanzo Node Client", "0.0.1"),
+    );
     let client = client_info
         .serve(transport)
         .await
@@ -227,10 +196,7 @@ pub async fn run_tool_via_sse(
     log::info!("connected to server: {server_info:#?}");
 
     let call_tool_result = client
-        .call_tool(CallToolRequestParam {
-            name: tool.into(),
-            arguments: Some(parameters),
-        })
+        .call_tool(CallToolRequestParams::new(tool).with_arguments(parameters))
         .await
         .inspect_err(|e| log::error!("error calling tool: {:?}", e));
     let _ = client
@@ -249,17 +215,10 @@ pub async fn run_tool_via_http(
 ) -> Result<CallToolResult> {
     let transport = StreamableHttpClientTransport::from_uri(url);
 
-    let client_info = ClientInfo {
-        protocol_version: Default::default(),
-        capabilities: ClientCapabilities::default(),
-        client_info: Implementation {
-            name: "Hanzo Node HTTP Client".to_string(),
-            version: env!("CARGO_PKG_VERSION").to_string(),
-            title: None,
-            icons: None,
-            website_url: None,
-        },
-    };
+    let client_info = ClientInfo::new(
+        ClientCapabilities::default(),
+        Implementation::new("Hanzo Node HTTP Client", env!("CARGO_PKG_VERSION")),
+    );
     let client = client_info
         .serve(transport)
         .await
@@ -275,10 +234,7 @@ pub async fn run_tool_via_http(
     log::info!("connected to server: {server_info:#?}");
 
     let call_tool_result = client
-        .call_tool(CallToolRequestParam {
-            name: tool.into(),
-            arguments: Some(parameters),
-        })
+        .call_tool(CallToolRequestParams::new(tool).with_arguments(parameters))
         .await
         .inspect_err(|e| log::error!("error calling tool: {:?}", e));
     let _ = client
@@ -294,7 +250,7 @@ pub async fn run_tool_via_http(
 // Resource Methods
 // =============================================================================
 
-use rmcp::model::{ReadResourceRequestParam, Resource};
+use rmcp::model::{ReadResourceRequestParams, Resource};
 
 /// List resources from an MCP server via HTTP
 pub async fn list_resources_via_http(
@@ -302,17 +258,10 @@ pub async fn list_resources_via_http(
     _config: Option<HashMap<String, String>>,
 ) -> Result<Vec<Resource>> {
     let transport = StreamableHttpClientTransport::from_uri(url);
-    let client_info = ClientInfo {
-        protocol_version: Default::default(),
-        capabilities: ClientCapabilities::default(),
-        client_info: Implementation {
-            name: "hanzo_mcp_http_client".to_string(),
-            version: env!("CARGO_PKG_VERSION").to_string(),
-            title: None,
-            icons: None,
-            website_url: None,
-        },
-    };
+    let client_info = ClientInfo::new(
+        ClientCapabilities::default(),
+        Implementation::new("hanzo_mcp_http_client", env!("CARGO_PKG_VERSION")),
+    );
     let client = client_info.serve(transport).await.map_err(|e| McpError {
         message: format!("HTTP client connection error: {:?}", e),
     })?;
@@ -339,20 +288,12 @@ pub async fn list_resources_via_sse(
     url: &str,
     _config: Option<HashMap<String, String>>,
 ) -> Result<Vec<Resource>> {
-    let transport = SseClientTransport::start(url).await.map_err(|e| McpError {
-        message: format!("{}", e),
-    })?;
-    let client_info = ClientInfo {
-        protocol_version: Default::default(),
-        capabilities: ClientCapabilities::default(),
-        client_info: Implementation {
-            name: "hanzo_mcp_sse_client".to_string(),
-            version: env!("CARGO_PKG_VERSION").to_string(),
-            title: None,
-            icons: None,
-            website_url: None,
-        },
-    };
+    // SSE client transport removed in rmcp 1.x; serve over Streamable HTTP.
+    let transport = StreamableHttpClientTransport::from_uri(url);
+    let client_info = ClientInfo::new(
+        ClientCapabilities::default(),
+        Implementation::new("hanzo_mcp_sse_client", env!("CARGO_PKG_VERSION")),
+    );
     let client = client_info.serve(transport).await.map_err(|e| McpError {
         message: format!("SSE client connection error: {:?}", e),
     })?;
@@ -416,17 +357,10 @@ pub async fn list_resources_via_command(
 /// Read a resource from an MCP server via HTTP
 pub async fn read_resource_via_http(url: &str, uri: &str) -> Result<String> {
     let transport = StreamableHttpClientTransport::from_uri(url);
-    let client_info = ClientInfo {
-        protocol_version: Default::default(),
-        capabilities: ClientCapabilities::default(),
-        client_info: Implementation {
-            name: "hanzo_mcp_http_client".to_string(),
-            version: env!("CARGO_PKG_VERSION").to_string(),
-            title: None,
-            icons: None,
-            website_url: None,
-        },
-    };
+    let client_info = ClientInfo::new(
+        ClientCapabilities::default(),
+        Implementation::new("hanzo_mcp_http_client", env!("CARGO_PKG_VERSION")),
+    );
     let client = client_info.serve(transport).await.map_err(|e| McpError {
         message: format!("HTTP client connection error: {:?}", e),
     })?;
@@ -434,9 +368,7 @@ pub async fn read_resource_via_http(url: &str, uri: &str) -> Result<String> {
     let _ = client.peer_info();
 
     let result = client
-        .read_resource(ReadResourceRequestParam {
-            uri: uri.to_string().into(),
-        })
+        .read_resource(ReadResourceRequestParams::new(uri))
         .await
         .inspect_err(|e| log::error!("error reading resource: {:?}", e));
 
@@ -467,20 +399,12 @@ pub async fn read_resource_via_http(url: &str, uri: &str) -> Result<String> {
 
 /// Read a resource from an MCP server via SSE
 pub async fn read_resource_via_sse(url: &str, uri: &str) -> Result<String> {
-    let transport = SseClientTransport::start(url).await.map_err(|e| McpError {
-        message: format!("{}", e),
-    })?;
-    let client_info = ClientInfo {
-        protocol_version: Default::default(),
-        capabilities: ClientCapabilities::default(),
-        client_info: Implementation {
-            name: "hanzo_mcp_sse_client".to_string(),
-            version: env!("CARGO_PKG_VERSION").to_string(),
-            title: None,
-            icons: None,
-            website_url: None,
-        },
-    };
+    // SSE client transport removed in rmcp 1.x; serve over Streamable HTTP.
+    let transport = StreamableHttpClientTransport::from_uri(url);
+    let client_info = ClientInfo::new(
+        ClientCapabilities::default(),
+        Implementation::new("hanzo_mcp_sse_client", env!("CARGO_PKG_VERSION")),
+    );
     let client = client_info.serve(transport).await.map_err(|e| McpError {
         message: format!("SSE client connection error: {:?}", e),
     })?;
@@ -488,9 +412,7 @@ pub async fn read_resource_via_sse(url: &str, uri: &str) -> Result<String> {
     let _ = client.peer_info();
 
     let result = client
-        .read_resource(ReadResourceRequestParam {
-            uri: uri.to_string().into(),
-        })
+        .read_resource(ReadResourceRequestParams::new(uri))
         .await
         .inspect_err(|e| log::error!("error reading resource: {:?}", e));
 
@@ -546,9 +468,7 @@ pub async fn read_resource_via_command(
     service.peer_info();
 
     let result = service
-        .read_resource(ReadResourceRequestParam {
-            uri: uri.to_string().into(),
-        })
+        .read_resource(ReadResourceRequestParams::new(uri))
         .await
         .inspect_err(|e| log::error!("error reading resource: {:?}", e));
 

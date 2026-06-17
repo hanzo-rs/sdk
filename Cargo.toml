@@ -57,7 +57,9 @@ oqs = "0.11"
 saorsa-pqc = "0.3"
 
 # MCP
-rmcp = { version = "0.8", features = ["client", "server", "macros", "transport-child-process", "transport-streamable-http-client-reqwest", "transport-sse-client-reqwest"] }
+# rmcp 1.x removed the dedicated SSE client transport (upstream #562, v0.11.0);
+# Streamable HTTP is the modern transport and parses SSE-formatted responses internally.
+rmcp = { version = "1.7.0", features = ["client", "server", "macros", "transport-child-process", "transport-streamable-http-client-reqwest", "reqwest"] }
 
 # Math (used by hanzo-embedding for cosine similarity etc.)
 rand = "0.8"
@@ -90,7 +92,8 @@ warp = "0.3"
 governor = "0.8"
 
 # HTTP / API
-reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+# reqwest 0.13 renamed the `rustls-tls` feature to `rustls` (aws-lc-rs provider).
+reqwest = { version = "0.13.4", default-features = false, features = ["json", "rustls"] }
 axum = "0.8"
 tower = "0.4"
 tower-http = { version = "0.6", features = ["cors", "compression-gzip"] }

@@ -56,7 +56,9 @@ tokio = { version = "1.45", features = ["full"] }
 
 # Random number generation (FIPS compliant)
 rand = "0.8"
-getrandom = { version = "0.2", features = ["std"] }
+# getrandom 0.4: `std` still gates the std::error::Error/io::Error impls used by
+# verify_fips_rng()'s error path; native targets need no backend feature.
+getrandom = { version = "0.4.2", features = ["std"] }
 
 # Attestation support
 hex = "0.4"
