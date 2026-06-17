@@ -47,15 +47,19 @@ rayon = "1.8"
 # Glob patterns
 glob = "0.3"
 
-# Search and AST
-tree-sitter = "0.20"
+# Search and AST.
+# Core + every grammar must stay on the same parser ABI (ABI 15 needs
+# core >= 0.23). Bumping a single grammar past the core's ABI makes
+# set_language fail at runtime — keep this whole set aligned to latest.
+tree-sitter = "0.26"
+tree-sitter-language = "0.1"  # canonical home of `LanguageFn` (grammars' LANGUAGE type)
 tree-sitter-rust = "0.24"
-tree-sitter-javascript = "0.20"
-tree-sitter-typescript = "0.20"
-tree-sitter-python = "0.20"
-tree-sitter-go = "0.20"
-tree-sitter-java = "0.20"
-tree-sitter-cpp = "0.20"
+tree-sitter-javascript = "0.25"
+tree-sitter-typescript = "0.23"
+tree-sitter-python = "0.25"
+tree-sitter-go = "0.25"
+tree-sitter-java = "0.23"
+tree-sitter-cpp = "0.23"
 tree-sitter-c = "0.24"
 
 # Vector store (optional)

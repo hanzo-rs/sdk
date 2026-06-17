@@ -1,5 +1,6 @@
 pub mod config;
 pub mod protocol;
+pub mod search;
 pub mod server;
 pub mod tools;
 
