@@ -56,7 +56,7 @@ tree-sitter-python = "0.20"
 tree-sitter-go = "0.20"
 tree-sitter-java = "0.20"
 tree-sitter-cpp = "0.20"
-tree-sitter-c = "0.20"
+tree-sitter-c = "0.24"
 
 # Vector store (optional)
 vectordb = { version = "0.1", optional = true }
