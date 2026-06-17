@@ -37,9 +37,9 @@ pub fn init() -> Result<()> {
 
 #[cfg(feature = "fips-mode")]
 fn verify_fips_rng() -> Result<()> {
-    // Verify SP 800-90A compliant RNG
-    use getrandom::getrandom;
+    // Verify SP 800-90A compliant RNG.
+    // getrandom 0.3+ renamed the free `getrandom(buf)` fn to `fill(buf)`.
     let mut buf = [0u8; 32];
-    getrandom(&mut buf).map_err(|e| PqcError::RngError(e.to_string()))?;
+    getrandom::fill(&mut buf).map_err(|e| PqcError::RngError(e.to_string()))?;
     Ok(())
 }

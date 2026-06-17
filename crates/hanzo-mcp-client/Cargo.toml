@@ -26,11 +26,12 @@ tracing = { workspace = true }
 anyhow = { workspace = true }
 
 # MCP transport (rmcp-based)
+# rmcp 1.x dropped the SSE client transport (upstream #562); the Streamable HTTP
+# client (reqwest-backed) is the modern transport and handles SSE-formatted responses.
 rmcp = { workspace = true, features = [
     "client",
     "transport-child-process",
-    "transport-sse-client",
-    "transport-streamable-http-client",
+    "transport-streamable-http-client-reqwest",
     "reqwest"
 ] }
 
