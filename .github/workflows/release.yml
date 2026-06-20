@@ -35,7 +35,7 @@ jobs:
   # Determine which crates to publish
   prepare:
     name: Prepare Release
-    runs-on: ubuntu-latest
+    runs-on: hanzo-build-linux-amd64
     outputs:
       publish_message_primitives: ${{ steps.determine.outputs.publish_message_primitives }}
       publish_pqc: ${{ steps.determine.outputs.publish_pqc }}
@@ -180,7 +180,7 @@ jobs:
   verify:
     name: Verify Packages
     needs: [prepare, build]
-    runs-on: ubuntu-latest
+    runs-on: hanzo-build-linux-amd64
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -211,7 +211,7 @@ jobs:
   changelog:
     name: Generate Changelog
     needs: [prepare, verify]
-    runs-on: ubuntu-latest
+    runs-on: hanzo-build-linux-amd64
     steps:
       - uses: actions/checkout@v4
         with:
@@ -234,7 +234,7 @@ jobs:
   publish:
     name: Publish Crates
     needs: [prepare, build, verify, changelog]
-    runs-on: ubuntu-latest
+    runs-on: hanzo-build-linux-amd64
     if: github.event.inputs.dry_run != 'true'
     steps:
       - uses: actions/checkout@v4
@@ -277,7 +277,7 @@ jobs:
   release:
     name: Create Release
     needs: [prepare, publish]
-    runs-on: ubuntu-latest
+    runs-on: hanzo-build-linux-amd64
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     steps:
       - uses: actions/checkout@v4
@@ -301,7 +301,7 @@ jobs:
   docs:
     name: Deploy Documentation
     needs: publish
-    runs-on: ubuntu-latest
+    runs-on: hanzo-build-linux-amd64
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -321,7 +321,7 @@ jobs:
   notify:
     name: Notify Completion
     needs: [prepare, publish, release, docs]
-    runs-on: ubuntu-latest
+    runs-on: hanzo-build-linux-amd64
     if: always()
     steps:
       - name: Send notification
