@@ -6,11 +6,11 @@ A comprehensive Key Broker Service for Hanzo Node that manages cryptographic key
 
 The Hanzo auth stack consists of three integrated components:
 
-### 1. **KMS (Key Management System)** - Infisical
+### 1. **KMS (Key Management System)** - Hanzo KMS
 - External service for centralized key management
 - Provides enterprise-grade secret storage
 - Handles encryption, rotation, and access control
-- Located at: `/Users/z/work/hanzo/kms` (Infisical deployment)
+- Backed by the luxfi/kms MPC server
 
 ### 2. **KBS (Key Broker Service)** - This Module
 - Attestation-based key release
@@ -62,9 +62,9 @@ let vault = VaultFactory::create_with_fallback(
 - Chain-based attestation
 - Zero-knowledge proofs
 
-## Integration with Infisical KMS
+## Integration with Hanzo KMS
 
-The KBS integrates with Infisical for enterprise key management:
+The KBS integrates with Hanzo KMS for enterprise key management:
 
 ```rust
 // Configure Hanzo KMS connection
@@ -159,8 +159,8 @@ let authorized = kbs.verify_capability(token)?;
 ```yaml
 version: '3.8'
 services:
-  infisical-kms:
-    image: infisical/infisical:latest
+  hanzo-kms:
+    image: ghcr.io/hanzoai/kms:latest
     environment:
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
       - AUTH_SECRET=${AUTH_SECRET}
@@ -170,11 +170,11 @@ services:
   hanzo-node:
     image: hanzo/node:latest
     environment:
-      - KMS_ENDPOINT=http://infisical-kms:8080
+      - KMS_ENDPOINT=http://hanzo-kms:8080
       - ENABLE_TEE=true
       - PRIVACY_TIER=3
     depends_on:
-      - infisical-kms
+      - hanzo-kms
 ```
 
 ### Kubernetes
