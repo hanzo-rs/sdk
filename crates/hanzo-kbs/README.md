@@ -67,14 +67,14 @@ let vault = VaultFactory::create_with_fallback(
 The KBS integrates with Infisical for enterprise key management:
 
 ```rust
-// Configure Infisical connection
+// Configure Hanzo KMS connection
 let kms_config = KmsConfig {
     endpoint: "https://kms.hanzo.ai",
-    api_key: std::env::var("INFISICAL_API_KEY")?,
-    project_id: std::env::var("INFISICAL_PROJECT_ID")?,
+    api_key: std::env::var("HANZO_KMS_API_KEY")?,
+    project_id: std::env::var("HANZO_KMS_PROJECT_ID")?,
 };
 
-// Create KBS with Infisical backend
+// Create KBS with Hanzo KMS backend
 let kbs = KeyBrokerService::new(
     kms_config,
     attestation_config,
