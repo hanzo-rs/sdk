@@ -1,3 +1,5 @@
+<p align="center"><img src=".github/hero.svg" alt="rust-sdk" width="880"></p>
+
 # Hanzo Rust SDK
 
 [![CI](https://github.com/hanzoai/rust-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/hanzoai/rust-sdk/actions/workflows/ci.yml)
