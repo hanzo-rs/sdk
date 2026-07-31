@@ -1,31 +1,34 @@
-//! tools — list the MCP tools this key can call.
+//! tools — list the MCP tools this key can reach.
 //!
-//! The Hanzo MCP surface is JSON-RPC 2.0 (HIP-0300) over a single endpoint.
-//! `tools/list` is the discovery call; every connector action shows up as a
-//! tool named <connector>_<action>.
+//! Operation: GET /v1/tools (cloud_get_v1_tools).
 //!
-//! Operation: POST /v1/automations/mcp (automations_mcp), method "tools/list".
+//! This is the served tool list: every tool the caller's org can see, which is
+//! what an MCP tools/list answers. To CALL one, the next route is
+//! POST /v1/tools/call (cloud_post_v1_tools_call).
 //!
 //! ```bash
 //! HANZO_API_KEY=sk-... cargo run -p hanzo-examples --example tools
 //! ```
 
-use hanzo_client::apis::mcp_api;
-use hanzo_client::models::{automations_mcp_request::Method, AutomationsMcpRequest};
+use hanzo_client::apis::tools_api;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cfg = hanzo_examples::config(None);
 
-    let mut req = AutomationsMcpRequest::new("2.0".into(), Method::ToolsSlashList);
-    req.id = Some(Some(serde_json::json!(1)));
+    let list = tools_api::cloud_get_v1_tools(&cfg, None, None).await?;
 
-    let resp = mcp_api::automations_mcp(&cfg, req).await?;
-
-    // JSON-RPC reports call errors in the body, with HTTP 200.
-    if let Some(err) = resp.error {
-        return Err(format!("tools/list: {}", err.message.unwrap_or_default()).into());
+    let tools = list.tools.unwrap_or_default();
+    if tools.is_empty() {
+        return Err("tools: the list is empty".into());
     }
-    println!("{}", serde_json::to_string_pretty(&resp.result)?);
+    println!("{} tools", tools.len());
+    for tool in tools.iter().take(3) {
+        println!(
+            "  {:<32} {}",
+            tool.name.clone().unwrap_or_default(),
+            tool.description.clone().unwrap_or_default()
+        );
+    }
     Ok(())
 }

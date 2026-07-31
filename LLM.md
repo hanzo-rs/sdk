@@ -84,6 +84,25 @@ Same document, different generator behaviour.
    answer 403, so auth middleware runs before the handler and a 403 proves the
    route exists. `examples/store` targets the documented contract regardless.
 
+### The six flows come from `flows.yaml`
+
+`hanzoai/openapi` carries a root-level **`flows.yaml`** naming the six example
+flows and, per flow, the operationIds to call in order. It is the manifest that
+makes "the same six examples in every SDK" a fact. `examples/` follows it — do
+not pick a different operation here without changing it there first.
+
+It is easy to conclude the file does not exist: `hanzoai/openapi` is private, and
+the GitHub contents API answers **404** rather than 403 for a path in a repo the
+caller cannot read, which is indistinguishable from a missing file. Fetch it
+authenticated.
+
+One place this repo knowingly disagrees with the manifest's prose, though not
+with its chosen operation: `flows.yaml`'s `tools` note says `/v1/mcp` "is not
+routed (404 page not found)". `/v1/mcp` is live and POST-only — `POST /v1/mcp`
+answers **202 Accepted**, `GET /v1/mcp` answers 404. The note reads as a
+GET-only probe. The operation it selects, `cloud_get_v1_tools`, is right
+regardless and is what `examples/tools` calls.
+
 ### Publishing
 
 `hanzo-client` publishes on its own tag, `hanzo-client-vX.Y.Z`, through the
@@ -481,6 +500,25 @@ The `codex-rmcp-client` can use hanzo-mcp for MCP operations:
 # In codex-rs/Cargo.toml
 hanzo-mcp = { git = "https://github.com/hanzoai/rust-sdk", version = "0.1" }
 ```
+
+### The six flows come from `flows.yaml`
+
+`hanzoai/openapi` carries a root-level **`flows.yaml`** naming the six example
+flows and, per flow, the operationIds to call in order. It is the manifest that
+makes "the same six examples in every SDK" a fact. `examples/` follows it — do
+not pick a different operation here without changing it there first.
+
+It is easy to conclude the file does not exist: `hanzoai/openapi` is private, and
+the GitHub contents API answers **404** rather than 403 for a path in a repo the
+caller cannot read, which is indistinguishable from a missing file. Fetch it
+authenticated.
+
+One place this repo knowingly disagrees with the manifest's prose, though not
+with its chosen operation: `flows.yaml`'s `tools` note says `/v1/mcp` "is not
+routed (404 page not found)". `/v1/mcp` is live and POST-only — `POST /v1/mcp`
+answers **202 Accepted**, `GET /v1/mcp` answers 404. The note reads as a
+GET-only probe. The operation it selects, `cloud_get_v1_tools`, is right
+regardless and is what `examples/tools` calls.
 
 ### Publishing to crates.io
 

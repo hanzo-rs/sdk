@@ -29,7 +29,9 @@ let me = auth_api::bot_whoami(&cfg).await?;
 ```
 
 Six runnable flows — `hello`, `chat`, `money`, `store`, `agent`, `tools` — the
-same six journeys as every other Hanzo SDK, live in [`examples/`](examples):
+same six journeys as every other Hanzo SDK, calling the operations
+[`hanzoai/openapi` `flows.yaml`](https://github.com/hanzoai/openapi/blob/main/flows.yaml)
+names. They live in [`examples/`](examples):
 
 ```bash
 HANZO_API_KEY=sk-... cargo run -p hanzo-examples --example hello
