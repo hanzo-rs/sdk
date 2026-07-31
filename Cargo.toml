@@ -59,7 +59,7 @@ oqs = "0.11"
 saorsa-pqc = "0.3"
 
 # MCP
-rmcp = { version = "0.8", features = ["client", "server", "macros", "transport-child-process", "transport-streamable-http-client-reqwest", "transport-sse-client-reqwest"] }
+rmcp = { version = "2.2", features = ["client", "server", "macros", "transport-child-process", "transport-streamable-http-client-reqwest", "transport-sse-client-reqwest"] }
 
 # Math (used by hanzo-embedding for cosine similarity etc.)
 rand = "0.8"
