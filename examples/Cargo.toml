@@ -1,0 +1,41 @@
+[package]
+name = "hanzo-examples"
+version = "0.1.0"
+description = "The six canonical Hanzo API flows, as runnable programs."
+publish = false
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+hanzo-client = { workspace = true }
+tokio = { workspace = true }
+serde_json = { workspace = true }
+reqwest = { workspace = true }
+
+# Each flow is its own directory so the layout matches every other Hanzo SDK.
+[[example]]
+name = "hello"
+path = "hello/main.rs"
+
+[[example]]
+name = "chat"
+path = "chat/main.rs"
+
+[[example]]
+name = "money"
+path = "money/main.rs"
+
+[[example]]
+name = "store"
+path = "store/main.rs"
+
+[[example]]
+name = "agent"
+path = "agent/main.rs"
+
+[[example]]
+name = "tools"
+path = "tools/main.rs"

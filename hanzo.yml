@@ -1,0 +1,43 @@
+# Hanzo CI — the ONE way this repo is gated, read by hanzoai/ci.
+#
+# No `images:` and no `deploy:`: this is a Rust library workspace. Consumers
+# link it from crates.io at a version, so what CI owes is a gate, not an
+# artifact. Publishing is `.github/workflows/release.yml`.
+#
+# The reusable runner provisions Go and Node but not Rust, so each step brings
+# its own toolchain from rustup and puts cargo on PATH.
+
+test:
+  - name: cargo-build
+    # The generated client is ~2300 files; if a regeneration produces something
+    # that does not compile, it must not reach a tag.
+    run: |
+      set -e
+      command -v cargo >/dev/null || curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+      . "$HOME/.cargo/env"
+      cargo build --release -p hanzo-client
+  - name: cargo-clippy
+    # hanzo-client sets its own lint policy in Cargo.toml: generated code is not
+    # hand-maintained, so style lints there have no author to act on. Everything
+    # hand-written in this workspace is still linted.
+    run: |
+      set -e
+      command -v cargo >/dev/null || curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --component clippy
+      . "$HOME/.cargo/env"
+      rustup component add clippy
+      cargo clippy --release -p hanzo-client -p hanzo-examples --all-targets -- -D warnings
+  - name: cargo-test
+    run: |
+      set -e
+      command -v cargo >/dev/null || curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+      . "$HOME/.cargo/env"
+      cargo test --workspace --exclude hanzo-client
+  - name: examples-build
+    # The six flows are the same journeys in every Hanzo SDK. An example that
+    # does not compile is worse than no example, so they are gated, not just
+    # committed.
+    run: |
+      set -e
+      command -v cargo >/dev/null || curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal
+      . "$HOME/.cargo/env"
+      cargo build --release -p hanzo-examples --examples

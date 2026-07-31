@@ -2,6 +2,99 @@
 
 Shared Rust infrastructure for Hanzo AI services - used by `hanzo-dev` (CLI), `hanzo-node` (blockchain node), and `hanzo-desktop` (Tauri app).
 
+## `hanzo-client` — the generated API client
+
+Canonical repo is **`hanzo-rs/sdk`**; `hanzoai/rust-sdk` is a GitHub rename
+redirect (`gh api repos/hanzoai/rust-sdk --jq .full_name` answers `hanzo-rs/sdk`).
+
+`crates/hanzo-client` is generated from `hanzoai/openapi` `hanzo.yaml` — 2452
+operations, 265 api modules, 2032 models. Every other crate here is hand-written
+domain code; this one is the REST surface and `src/` is **never** edited by hand.
+Edit the per-service spec in `hanzoai/openapi` and regenerate:
+
+```bash
+./scripts/generate.sh                            # public URL, then GitHub API fallback
+SPEC=/path/to/hanzo.yaml ./scripts/generate.sh   # local override
+```
+
+`hanzoai/openapi` is **private**, so `raw.githubusercontent.com` 404s for it. The
+script tries the public URL first (it starts working the day the repo opens) and
+falls back to the GitHub API with `SPEC_TOKEN`/`GH_TOKEN`/`gh auth token`,
+saying on stderr which case it hit. Both paths use `curl -f` under `set -e`, so a
+failed fetch stops the run rather than regenerating from a stale spec.
+
+`scripts/generate.sh` replaces `crates/hanzo-client/src` and nothing else —
+`Cargo.toml`, `README.md`, `examples/` and `scripts/` are repo-owned.
+
+### Two generator defects, fixed here rather than in the spec
+
+1. **`--type-mappings=file=Vec<u8>`.** The rust generator maps a binary request
+   body to `std::path::PathBuf` and emits `.body(that)`, but `reqwest::Body` has
+   no `From<PathBuf>`. The lowercase key `file` is the one that works; `binary`
+   and `File` are silently ignored.
+
+2. **`-t scripts/templates`** — one overridden template,
+   `reqwest/api.mustache`. It emits `.body()` for a file body unconditionally,
+   including when the body is optional, where the parameter is
+   `Option<Vec<u8>>` and `reqwest::Body` has no `From<Option<_>>`. 14 operations
+   take an optional `application/octet-stream` body. No type mapping can fix
+   this — the problem is the `Option`, not the inner type — so the override
+   wraps that case in `if let Some(..)`. Templates absent from that directory
+   fall back to the generator's built-ins, so the override stays one file.
+
+Spec validation is **on**; `hanzo.yaml` validates with 0 errors.
+
+### Lints
+
+`crates/hanzo-client/Cargo.toml` sets `[lints.clippy] all = "allow"` plus the
+naming lints. Generated code is not hand-maintained, so style lints there have
+no author to act on — there were 3248 under `-D warnings`. Correctness still
+gates through `cargo build`. Everything hand-written in the workspace is linted
+normally.
+
+### Auth, and how it differs from the Go SDK
+
+The rust generator **does** honour `hanzo.yaml`'s root-level
+`security: [{bearerAuth: []}]` — 235 of 241 api modules read
+`configuration.bearer_access_token`. So setting that field is enough and this
+SDK needs no hand-written auth seam. The Go generator does not, which is why
+`hanzo-go/sdk` carries a `hanzo.go` constructor that sets the header manually.
+Same document, different generator behaviour.
+
+### Open spec defects
+
+1. **Route-derived operationIds.** Cloud-owned routes lost their semantic
+   operationIds — `billing_billingBalance` became `cloud_get_v1_billing_balance`.
+   An operationId is the SDK function name in every language, so this is a
+   cross-language naming regression.
+
+2. **728 of 2452 operations declare no 2xx content schema**, many carrying a bare
+   `default:`. The rust generator turns those into `Result<(), Error<..>>` and
+   **drops the response body entirely** — worse than Go, which at least hands
+   back the raw response. `GET /v1/billing/balance`, `GET /v1/billing/usage` and
+   `POST /v1/agents/{ref}/run` are all in that set and all sit on canonical flow
+   paths, which is why `examples/src/lib.rs` carries a `get_json` helper. That
+   helper is a workaround and should be deleted the day those operations regain
+   schemas.
+
+3. **kv's parameterized routes are authored but not served.** The spec declares
+   `GET`/`PUT`/`DELETE /v1/kv/keys/{key}`; the gateway answers a plain 404/405 on
+   them while `/v1/kv/keys` and `/v1/kv/clusters` answer 403 `X-Org-Id required`.
+   Control: registered parameterized routes such as `/v1/agents/{ref}` also
+   answer 403, so auth middleware runs before the handler and a 403 proves the
+   route exists. `examples/store` targets the documented contract regardless.
+
+### Publishing
+
+`hanzo-client` publishes on its own tag, `hanzo-client-vX.Y.Z`, through the
+existing `.github/workflows/release.yml` (`CARGO_REGISTRY_TOKEN`, a repo secret
+that is present). It depends on no other crate in this workspace, so it needs no
+place in the dependency-ordered publish sequence. First release is 0.1.0.
+
+The crates.io name `hanzo-api` was **not** used: it is already taken by a
+different Hanzo repo (hanzonet/network, 1.1.13), and republishing under it would
+hijack another project's crate identity. `hanzo-client` was free.
+
 ## Architecture Overview
 
 ```

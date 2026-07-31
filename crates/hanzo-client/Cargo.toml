@@ -1,0 +1,34 @@
+[package]
+name = "hanzo-client"
+version = "0.1.0"
+description = "Generated client for the Hanzo API — every service, one crate."
+documentation = "https://docs.rs/hanzo-client"
+readme = "README.md"
+keywords = ["hanzo", "api", "client", "openapi", "ai"]
+categories = ["api-bindings", "asynchronous"]
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_repr = "0.1"
+serde_with = { version = "3.8", default-features = false, features = ["base64", "std", "macros"] }
+url = "2.5"
+uuid = { workspace = true }
+reqwest = { workspace = true }
+
+# Generated code is not hand-maintained, so style lints have no author to act on
+# them — there were 3248 under `-D warnings`, every one a naming or idiom note on
+# a machine-written file. Correctness still gates via `cargo build`.
+[lints.rust]
+unused = "allow"
+non_snake_case = "allow"
+non_camel_case_types = "allow"
+
+[lints.clippy]
+all = "allow"

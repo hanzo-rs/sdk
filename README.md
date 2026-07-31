@@ -5,6 +5,42 @@
 
 Official Rust SDK for Hanzo AI infrastructure, providing secure key management, post-quantum cryptography, LLM safety, content extraction, and core primitives for building AI applications.
 
+## The API client — `hanzo-client`
+
+`crates/hanzo-client` is the generated client for the whole Hanzo API: 2452
+operations across 265 modules, generated from `hanzoai/openapi` `hanzo.yaml` by
+`./scripts/generate.sh`. The other crates in this workspace are hand-written
+domain libraries (crypto, DID, MCP, agents); this one is the REST surface and is
+never edited by hand.
+
+```toml
+[dependencies]
+hanzo-client = "0.1"
+```
+
+```rust
+use hanzo_client::apis::{auth_api, configuration::Configuration};
+
+let cfg = Configuration {
+    bearer_access_token: std::env::var("HANZO_API_KEY").ok(),
+    ..Default::default()
+};
+let me = auth_api::bot_whoami(&cfg).await?;
+```
+
+Six runnable flows — `hello`, `chat`, `money`, `store`, `agent`, `tools` — the
+same six journeys as every other Hanzo SDK, live in [`examples/`](examples):
+
+```bash
+HANZO_API_KEY=sk-... cargo run -p hanzo-examples --example hello
+```
+
+`store` and `agent` are org-scoped; set `HANZO_ORG_ID` too.
+
+Regenerate with `./scripts/generate.sh`. `hanzoai/openapi` is private today, so
+the public spec URL 404s and the script falls back to the GitHub API — supply
+`SPEC_TOKEN` (or `GH_TOKEN`, or be logged into `gh`).
+
 ## Crates
 
 This workspace contains the following crates:

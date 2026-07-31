@@ -1,0 +1,40 @@
+name: Regenerate from OpenAPI spec
+# One spec, one way. hanzoai/openapi `hanzo.yaml` is the source of truth; this
+# regenerates crates/hanzo-client and opens a PR. Never hand-edit
+# crates/hanzo-client/src — edit the per-service spec in hanzoai/openapi.
+#
+# Cargo.toml, examples/ and scripts/ are hand-written and survive regeneration:
+# scripts/generate.sh replaces src/ and nothing else.
+on:
+  repository_dispatch:
+    types: [spec-update]
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '21'}
+      - uses: dtolnay/rust-toolchain@stable
+        with: {components: clippy}
+      - name: Regenerate
+        run: ./scripts/generate.sh
+        env:
+          # Read token for the private hanzoai/openapi (contents:read).
+          SPEC_TOKEN: ${{ secrets.SPEC_TOKEN }}
+      - name: Verify it builds
+        run: |
+          cargo build --release -p hanzo-client
+          cargo clippy --release -p hanzo-client -p hanzo-examples --all-targets -- -D warnings
+          cargo build --release -p hanzo-examples --examples
+      - uses: peter-evans/create-pull-request@v6
+        with:
+          branch: codegen/spec-update
+          title: 'chore: regenerate hanzo-client from openapi hanzo.yaml'
+          commit-message: 'chore: regenerate hanzo-client from openapi hanzo.yaml'
+          body: Automated regeneration from hanzoai/openapi `hanzo.yaml`.

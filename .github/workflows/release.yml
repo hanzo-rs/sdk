@@ -8,6 +8,9 @@ on:
       - 'hanzo-pqc-*'
       - 'hanzo-kbs-*'
       - 'hanzo-agent-proxy-*'
+      # The generated API client releases on the spec's cadence, not the
+      # hand-written crates'. Tag it `hanzo-client-vX.Y.Z`.
+      - 'hanzo-client-*'
   workflow_dispatch:
     inputs:
       crate:
@@ -263,6 +266,17 @@ jobs:
         if: needs.prepare.outputs.publish_agent_proxy == 'true'
         run: |
           cd crates/hanzo-agent-proxy
+          cargo publish --no-verify
+          sleep 30
+
+      # hanzo-client is generated from hanzoai/openapi hanzo.yaml and depends on
+      # no other crate in this workspace, so it publishes on its own tag and in
+      # no particular order. --no-verify for the same reason as the others: the
+      # release build already compiled it.
+      - name: Publish hanzo-client
+        if: startsWith(github.ref, 'refs/tags/hanzo-client-')
+        run: |
+          cd crates/hanzo-client
           cargo publish --no-verify
           sleep 30
 

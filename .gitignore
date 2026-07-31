@@ -57,3 +57,6 @@ crates/hanzo-tools-runner/hanzo-tools-runner-resources/uv
 crates/hanzo-tools-runner/hanzo-tools-runner-resources/*.zip
 
 CLAUDE.md
+
+# Generator scratch
+/openapi-generator-cli-*.jar
