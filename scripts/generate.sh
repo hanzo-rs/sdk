@@ -25,6 +25,9 @@ SPEC_URL="${SPEC_URL:-https://raw.githubusercontent.com/${SPEC_REPO}/${SPEC_REF}
 SPEC="${SPEC:-}"
 JAR="${JAR:-${TMPDIR:-/tmp}/openapi-generator-cli-${GENERATOR_VERSION}.jar}"
 
+check=0
+[ "${1:-}" = "--check" ] && check=1
+
 if [ -z "$SPEC" ]; then
   SPEC="$(mktemp)"
   # Public fetch first: it is the plain path, needs no credential, and starts
@@ -49,7 +52,32 @@ if [ ! -f "$JAR" ]; then
     "https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/${GENERATOR_VERSION}/openapi-generator-cli-${GENERATOR_VERSION}.jar"
 fi
 
-OUT="$(mktemp -d)"
+STAGE="$(mktemp -d)"
+
+# The document as JSON, because YAML has a ceiling and JSON does not.
+#
+# swagger-parser hands a YAML document to snakeyaml, which refuses anything over
+# 3 * 1024 * 1024 = 3145728 code points. hanzo.yaml passed that mark and this
+# script has been unable to generate since: measured 2026-08-01 at 3,686,318
+# code points, `YAMLException: The incoming YAML document exceeds the limit:
+# 3145728 code points`. The failure does not say so out loud — the parser logs
+# SnakeException, falls through to the Swagger 2.0 compat reader, and dies with
+# "Issues with the OpenAPI input", which reads like a malformed spec. It is not:
+# the document validates at 0 errors.
+#
+# `-DmaxYamlCodePoints` is NOT the fix — swagger-parser honours it in generator
+# 7.24.0 and ignores it in the 7.14.0 pinned here. JSON avoids snakeyaml
+# altogether on every version. The generator reads either format from -i, so
+# this costs one temp file and removes a ceiling the document keeps growing into.
+#
+# The same conversion hanzoai/openapi's generate.py and cpp-sdk's generate.sh
+# already do, for the same reason, and deliberately NOT written back as a second
+# committed artifact: there is one document, and it is hanzo.yaml.
+SPEC_JSON="$STAGE/hanzo.json"
+python3 -c 'import json,sys,yaml; json.dump(yaml.safe_load(open(sys.argv[1])), open(sys.argv[2],"w"))' \
+  "$SPEC" "$SPEC_JSON"
+
+OUT="$STAGE/gen"
 # Validation stays ON. hanzo.yaml validates clean, and a malformed document
 # should fail here rather than surface as a compile error spread across 1300
 # generated files.
@@ -67,12 +95,28 @@ OUT="$(mktemp -d)"
 # because the problem is the Option, not the inner type. Templates not present
 # in that directory fall back to the generator's built-ins.
 java -jar "$JAR" generate \
-  -i "$SPEC" -g rust \
+  -i "$SPEC_JSON" -g rust \
   -t scripts/templates \
   '--type-mappings=file=Vec<u8>' \
   --additional-properties=packageName=hanzo-client,library=reqwest,supportAsync=true,supportMultipleResponses=false,preferUnsignedInt=false \
   --git-user-id=hanzo-rs --git-repo-id=sdk \
   -o "$OUT"
+
+if [ "$check" = 1 ]; then
+  # The client is generated, so the only thing that can rot is the committed
+  # copy. This is what makes "never edit crates/hanzo-client/src" a fact rather
+  # than a convention — and it is what lets the release train gate on this repo.
+  if diff -qr "$OUT/src" crates/hanzo-client/src >/dev/null 2>&1; then
+    echo "clean: crates/hanzo-client/src is what hanzo.yaml projects"
+    exit 0
+  fi
+  echo "DRIFTED: crates/hanzo-client/src"
+  # `|| true` because pipefail turns head's early exit into a SIGPIPE failure on
+  # diff, which would abort the script before it could report the drift it just
+  # found — a check that dies on the finding is not a check.
+  { diff -qr "$OUT/src" crates/hanzo-client/src 2>&1 || true; } | head -20
+  exit 1
+fi
 
 # The crate root owns Cargo.toml and README.md. Keep only the generated sources,
 # replaced wholesale so a renamed or dropped operation cannot leave a stale
