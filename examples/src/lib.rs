@@ -1,6 +1,16 @@
-//! The six canonical Hanzo API flows live in this crate's `examples/`
-//! directory — `hello`, `chat`, `money`, `store`, `agent`, `tools`. They are
-//! the same six journeys in every Hanzo SDK.
+//! The canonical Hanzo API flows live in this crate's `examples/` directory —
+//! `hello`, `money`, `store`, `agent`, `tools`.
+//!
+//! `chat` is absent, and that is a measurement rather than a choice. The
+//! document this client is generated from — hanzoai/cloud `openapi.yaml` —
+//! declares ZERO `/v1/ai*` paths and none of the eleven inference addresses
+//! (`/v1/chat/completions`, `/v1/embeddings`, `/v1/messages`, `/v1/models`, …),
+//! because the AI product is mounted behind a `/v1/{wildcard1}` relay that
+//! type-erases its router. The routes are live — POST /v1/chat/completions
+//! answers 401 from `server: hanzo`, i.e. routed and gated — they are simply
+//! undescribed, so no generated client can carry a method for them. Add
+//! `examples/chat` back the day `paths['/v1/chat/completions']` appears in the
+//! document.
 //!
 //! ```bash
 //! HANZO_API_KEY=sk-... cargo run -p hanzo-examples --example hello
@@ -46,8 +56,9 @@ pub fn config_from_env() -> Configuration {
 
 /// GET a path and return the decoded JSON body.
 ///
-/// This exists only because 728 of the 2452 operations in `hanzo.yaml` declare
-/// no 2xx content schema — many carry a bare `default:` response. The Rust
+/// This exists only because 684 of the 1636 operations in the document declare
+/// no response at all — they state the route the router proves exists and not
+/// its shape, which OpenAPI 3.1 permits. The Rust
 /// generator turns those into `Result<(), Error<..>>`, discarding the body, so
 /// `GET /v1/billing/balance` and friends cannot return what they actually send.
 /// (The Go generator hands back the raw response instead, which is why the Go

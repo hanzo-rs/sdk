@@ -576,3 +576,28 @@ Goal: Turn all devices in a home network into an AI compute cluster.
 - QR code device pairing via CLI/app
 - libp2p for P2P networking (from hanzo-node)
 - WebGPU support for browser-based compute
+
+## The document moved, and the old one was shipping dead addresses
+
+As of **0.1.1** this crate is a projection of **`hanzoai/cloud` `openapi.yaml`**
+— the document cloud's own routers emit — pinned in `.spec-lock` by
+(repo, ref, sha256). It used to be a projection of `hanzoai/openapi`
+`hanzo.yaml`, the hand-merged master (`merge.py`, `capabilities.yaml`, document
+version `8.0.0`).
+
+Measured on the published `0.1.0` crate: 1683 distinct `/v1` paths, of which
+**89 under `/v1/commerce` where the server serves 10**, and four billing
+addresses that **404 against api.hanzo.ai** — `gpu-charge`, `gpu-eligibility`,
+`payment-config`, `payment-methods` — while the ones the server actually serves
+(`gpu/charge`, `gpu/eligibility`, `methods`, `settings`) were absent entirely.
+Cloud's document has 1208 paths / 1636 operations and carries the live
+spellings. A smaller true document beats a larger unverified one.
+
+`scripts/generate.sh` passes `--skip-validate-spec`, and that is not a shortcut.
+The document is OpenAPI **3.1**, where `responses` is OPTIONAL on an operation;
+the validator in generator 7.14.0 still enforces the 3.0 rule that it is
+required, so it refuses a valid document. 684 of the 1636 operations are routes
+the router proves exist and whose response shape no seam can state, and cloud
+emits those with no `responses` key on purpose. What keeps a bad document out is
+`cargo build` over the whole crate plus the example flows — a compiler error with
+a file and a line, which is strictly more than the validator ever said.

@@ -78,9 +78,20 @@ python3 -c 'import json,sys,yaml; json.dump(yaml.safe_load(open(sys.argv[1])), o
   "$SPEC" "$SPEC_JSON"
 
 OUT="$STAGE/gen"
-# Validation stays ON. hanzo.yaml validates clean, and a malformed document
-# should fail here rather than surface as a compile error spread across 1300
-# generated files.
+# --skip-validate-spec: the document is OpenAPI 3.1, and 3.1 made `responses`
+# OPTIONAL on an operation. The validator in generator 7.14.0 still enforces the
+# 3.0 rule that it is required, so it REFUSES a document that is valid. Measured
+# on hanzoai/cloud's openapi.yaml: 684 of 1636 operations are routes the router
+# proves exist and whose response shape no seam can state, and cloud emits those
+# with no `responses` key on purpose (openapi/openapi.go — "absent stays valid
+# and absent beats invented"). Without this flag the crate cannot be generated
+# from the one document at all, which is exactly why the published crate was
+# still a projection of the retired hand-authored master.
+#
+# What keeps a bad document out is not the validator, it is `cargo build` — the
+# whole generated crate plus the six example flows, in hanzo.yml's test: block.
+# A malformed document fails there with a file and a line, which is strictly
+# more than "Issues with the OpenAPI input" ever told anyone.
 #
 # --type-mappings=file=Vec<u8>: the rust generator maps a binary request body to
 # std::path::PathBuf and then emits `.body(that)`, but reqwest::Body has no
@@ -96,6 +107,7 @@ OUT="$STAGE/gen"
 # in that directory fall back to the generator's built-ins.
 java -jar "$JAR" generate \
   -i "$SPEC_JSON" -g rust \
+  --skip-validate-spec \
   -t scripts/templates \
   '--type-mappings=file=Vec<u8>' \
   --additional-properties=packageName=hanzo-client,library=reqwest,supportAsync=true,supportMultipleResponses=false,preferUnsignedInt=false \

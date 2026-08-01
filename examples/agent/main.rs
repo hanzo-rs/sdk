@@ -1,8 +1,8 @@
 //! agent — create an agent, run it, read the run back.
 //!
-//! Operations: POST /v1/agents (cloud_post_v1_agents),
-//! POST /v1/agents/{ref}/run (cloud_post_v1_agents_by_ref_run),
-//! GET /v1/agents/{ref}/runs (cloud_get_v1_agents_ref_runs).
+//! Operations: POST /v1/agents (post_v1_agents),
+//! POST /v1/agents/{ref}/run (post_v1_agents_by_ref_run),
+//! GET /v1/agents/{ref}/runs (get_v1_agents_ref_runs).
 //!
 //! `ref` accepts the public id (agent_...) or the org-unique name, so run and
 //! read both use the name just created without waiting for an id.
@@ -19,7 +19,7 @@
 //! ```
 
 use hanzo_client::apis::{agents_api, configuration::Configuration};
-use hanzo_client::models::{CloudAgentRunView, CloudCreateAgentIn};
+use hanzo_client::models::{AgentRunView, CreateAgentIn};
 use std::time::{Duration, Instant};
 
 #[tokio::main]
@@ -30,19 +30,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Names are org-unique, so a hardcoded one collides with the last run.
     let name = format!("sdk-example-{}", std::process::id());
 
-    let mut create = CloudCreateAgentIn::new();
+    let mut create = CreateAgentIn::new();
     create.name = Some(name.clone());
     create.model = Some(model);
     create.instructions = Some("You answer in exactly one sentence.".into());
 
-    let created = agents_api::cloud_post_v1_agents(&cfg, create).await?;
+    let created = agents_api::post_v1_agents(&cfg, create).await?;
     println!(
         "created  {} ({})",
         created.name.unwrap_or_default(),
         created.id.unwrap_or_default()
     );
 
-    agents_api::cloud_post_v1_agents_by_ref_run(&cfg, &name).await?;
+    agents_api::post_v1_agents_by_ref_run(&cfg, &name).await?;
     println!("started  a run on {name}");
 
     let run = poll(&cfg, &name).await?;
@@ -59,10 +59,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 async fn poll(
     cfg: &Configuration,
     agent_ref: &str,
-) -> Result<CloudAgentRunView, Box<dyn std::error::Error>> {
+) -> Result<AgentRunView, Box<dyn std::error::Error>> {
     let deadline = Instant::now() + Duration::from_secs(120);
     while Instant::now() < deadline {
-        let list = agents_api::cloud_get_v1_agents_ref_runs(cfg, agent_ref, Some(1)).await?;
+        let list = agents_api::get_v1_agents_ref_runs(cfg, agent_ref, Some(1)).await?;
         // Runs are newest first.
         if let Some(run) = list.runs.unwrap_or_default().into_iter().next() {
             if matches!(

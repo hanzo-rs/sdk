@@ -1,34 +1,47 @@
-//! tools — list the MCP tools this key can reach.
+//! tools — which MCP servers this key can reach.
 //!
-//! Operation: GET /v1/tools (cloud_get_v1_tools).
+//! Operation: GET /v1/mcp/servers (get_v1_mcp_servers).
 //!
-//! This is the served tool list: every tool the caller's org can see, which is
-//! what an MCP tools/list answers. To CALL one, the next route is
-//! POST /v1/tools/call (cloud_post_v1_tools_call).
+//! These are the external MCP servers the caller's org has enabled — the half
+//! of the tool surface that is per-org configuration rather than a property of
+//! the binary.
+//!
+//! THE JSON-RPC DOOR IS NOT IN THE DOCUMENT. `POST /v1/mcp` is what an MCP
+//! client actually speaks and it answers `tools/list` with 833 tools, but
+//! hanzoai/cloud's openapi.yaml declares only /v1/mcp/servers and
+//! /v1/mcp/servers/{id}. A generated client cannot carry a method for an
+//! operation the document does not have, and hand-rolling the call would make
+//! this SDK stop being a projection — the one property it exists to have.
+//!
+//! WHEN THE DOOR IS DECLARED, MOVE THIS FLOW ONTO IT. The test is one line:
+//! does `paths['/v1/mcp']` exist in the document?
 //!
 //! ```bash
 //! HANZO_API_KEY=sk-... cargo run -p hanzo-examples --example tools
 //! ```
 
-use hanzo_client::apis::tools_api;
+use hanzo_client::apis::mcp_api;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cfg = hanzo_examples::config(None);
 
-    let list = tools_api::cloud_get_v1_tools(&cfg, None, None).await?;
+    let list = mcp_api::get_v1_mcp_servers(&cfg).await?;
 
-    let tools = list.tools.unwrap_or_default();
-    if tools.is_empty() {
-        return Err("tools: the list is empty".into());
-    }
-    println!("{} tools", tools.len());
-    for tool in tools.iter().take(3) {
+    let servers = list.servers.unwrap_or_default();
+    println!("{} MCP server(s) enabled for this org", servers.len());
+    for s in servers.iter().take(5) {
         println!(
-            "  {:<32} {}",
-            tool.name.clone().unwrap_or_default(),
-            tool.description.clone().unwrap_or_default()
+            "  {}  {}",
+            s.name.clone().unwrap_or_else(|| "(unnamed)".into()),
+            s.url
+                .clone()
+                .or_else(|| s.source.clone())
+                .unwrap_or_else(|| "(no endpoint)".into())
         );
+    }
+    if servers.len() > 5 {
+        println!("  … and {} more", servers.len() - 5);
     }
     Ok(())
 }

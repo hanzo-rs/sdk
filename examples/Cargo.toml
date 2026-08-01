@@ -1,7 +1,7 @@
 [package]
 name = "hanzo-examples"
 version = "0.1.0"
-description = "The six canonical Hanzo API flows, as runnable programs."
+description = "The canonical Hanzo API flows, as runnable programs."
 publish = false
 edition.workspace = true
 authors.workspace = true
@@ -19,10 +19,6 @@ reqwest = { workspace = true }
 [[example]]
 name = "hello"
 path = "hello/main.rs"
-
-[[example]]
-name = "chat"
-path = "chat/main.rs"
 
 [[example]]
 name = "money"
