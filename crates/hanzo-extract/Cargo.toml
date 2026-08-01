@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Hanzo AI <dev@hanzo.ai>"]
 description = "Content extraction with built-in sanitization via hanzo-guard"
 license = "MIT"
-repository = "https://github.com/hanzoai/rust-sdk"
+repository = "https://github.com/hanzo-rs/sdk"
 keywords = ["extraction", "pdf", "web", "sanitization", "llm"]
 categories = ["development-tools", "web-programming", "text-processing"]
 

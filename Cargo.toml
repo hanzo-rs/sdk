@@ -26,7 +26,10 @@ version = "1.1.21"
 edition = "2021"
 authors = ["Hanzo AI <dev@hanzo.ai>"]
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/hanzoai/rust-sdk"
+# Canonical name: hanzoai/rust-sdk was renamed to hanzo-rs/sdk. GitHub still
+# redirects, but a published crate should name the repository that exists — and
+# the sibling crate `hanzo` already points here.
+repository = "https://github.com/hanzo-rs/sdk"
 homepage = "https://hanzo.ai"
 rust-version = "1.88"
 
