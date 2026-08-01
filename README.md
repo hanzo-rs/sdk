@@ -7,8 +7,9 @@ Official Rust SDK for Hanzo AI infrastructure, providing secure key management, 
 
 ## The API client — `hanzo-client`
 
-`crates/hanzo-client` is the generated client for the whole Hanzo API: 2452
-operations across 265 modules, generated from `hanzoai/openapi` `hanzo.yaml` by
+`crates/hanzo-client` is the generated client for the whole Hanzo API,
+generated from `hanzoai/openapi` `hanzo.yaml` — the same document the API serves
+at [`/v1/openapi.json`](https://api.hanzo.ai/v1/openapi.json) — by
 `./scripts/generate.sh`. The other crates in this workspace are hand-written
 domain libraries (crypto, DID, MCP, agents); this one is the REST surface and is
 never edited by hand.

@@ -5,7 +5,7 @@ The Rust client for the [Hanzo API](https://api.hanzo.ai). Generated from
 document that defines every Hanzo service — so this crate and the Go,
 TypeScript, and Python SDKs all describe the same product.
 
-2452 operations across 265 API modules, one crate.
+Every service, one crate.
 
 ```toml
 [dependencies]
