@@ -14,8 +14,27 @@ Edit the per-service spec in `hanzoai/openapi` and regenerate:
 
 ```bash
 ./scripts/generate.sh                            # public URL, then GitHub API fallback
+./scripts/generate.sh --check                    # diff only; non-zero if src/ drifted
 SPEC=/path/to/hanzo.yaml ./scripts/generate.sh   # local override
 ```
+
+**The generator is fed JSON, not the YAML.** swagger-parser hands YAML to
+snakeyaml, which refuses anything over `3 * 1024 * 1024 = 3145728` code points;
+`hanzo.yaml` is 3,686,318 (measured 2026-08-01) and this script could not
+generate at all until the conversion landed. The error does not name the cause —
+the parser logs `SnakeException`, falls through to the Swagger 2.0 compat reader,
+and dies with "Issues with the OpenAPI input", which reads like a malformed
+document. It is not: `hanzo.yaml` validates at 0 errors. `-DmaxYamlCodePoints`
+is not the fix either — swagger-parser honours it in generator 7.24.0 and
+ignores it in the 7.14.0 pinned here. JSON avoids snakeyaml on every version.
+The JSON is a temp file and is never written back: there is one document, and it
+is `hanzo.yaml`.
+
+`--check` regenerates into a temp tree and diffs; `hanzo.yml`'s
+`spec-drift-check` runs it. It exists because `cargo build` cannot see this kind
+of rot — a client generated from last week's spec compiles perfectly. Measured
+against `hanzo.yaml@9781a56`, `crates/hanzo-client/src` has drifted, so the
+`0.1.0` on crates.io is a projection of an earlier `hanzo.yaml`, not of today's.
 
 `hanzoai/openapi` is **private**, so `raw.githubusercontent.com` 404s for it. The
 script tries the public URL first (it starts working the day the repo opens) and
