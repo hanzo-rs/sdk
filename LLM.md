@@ -105,10 +105,38 @@ regardless and is what `examples/tools` calls.
 
 ### Publishing
 
-`hanzo-client` publishes on its own tag, `hanzo-client-vX.Y.Z`, through the
-existing `.github/workflows/release.yml` (`CARGO_REGISTRY_TOKEN`, a repo secret
-that is present). It depends on no other crate in this workspace, so it needs no
-place in the dependency-ordered publish sequence. First release is 0.1.0.
+**One crate per tag, `<crate>-v<semver>`.** `.github/workflows/release.yml` reads
+the crate name and the version out of the tag, refuses if that crate's
+`Cargo.toml` says a different version, packs, publishes with
+`CARGO_REGISTRY_TOKEN` (a repo secret, present), and then proves the result
+against the public crates.io API before the job goes green. `hanzo-client`
+depends on no other crate here, so it needs no place in any ordering — which is
+what lets it release on the spec's cadence while the hand-written crates release
+on theirs.
+
+Re-pushing a published tag is a **no-op** when the packed digest equals what
+crates.io serves, and a **hard failure** when it differs. That is the whole
+resume rule: a release that stopped half-way can be re-run, and one that was
+published out of band cannot be papered over.
+
+Three things died to make that one mechanism, and this is where they went:
+* the workspace-wide `v*` tag that published three crates at once — a second way
+  to do this file's one job, and it ran `cd crates/hanzo-pqc`, a directory this
+  workspace no longer has. It could not have succeeded again.
+* the 5-target build matrix in front of the publish. `cargo publish` verifies by
+  building the packed `.crate` as a consumer receives it, which is a stronger
+  gate than building the working tree; `hanzo.yml`'s `test:` block already gates
+  every commit that can reach a tag.
+* `PUBLISHING.md`, `QUICK_PUBLISH.md`, `SETUP_PUBLISHING.md` and
+  `tag-release.yml` — three documents and a workflow describing the scheme
+  above, all naming crates this workspace deleted.
+
+The runner is `ubuntu-latest`, not the arc pool, and that is deliberate:
+measured 2026-08-01, hanzoai/js-sdk's publish job requested
+`hanzo-build-linux-amd64`, was never assigned a runner, sat 24h and was
+cancelled — that release reached npm only because a human ran `npm publish` by
+hand. A publish that cannot be scheduled is not a release lane. Image builds
+still belong on the arc pool; this one packs a tarball.
 
 The crates.io name `hanzo-api` was **not** used: it is already taken by a
 different Hanzo repo (hanzonet/network, 1.1.13), and republishing under it would
@@ -519,19 +547,6 @@ routed (404 page not found)". `/v1/mcp` is live and POST-only — `POST /v1/mcp`
 answers **202 Accepted**, `GET /v1/mcp` answers 404. The note reads as a
 GET-only probe. The operation it selects, `cloud_get_v1_tools`, is right
 regardless and is what `examples/tools` calls.
-
-### Publishing to crates.io
-
-Publish order (dependencies must be published first):
-1. `cargo publish -p hanzo-mcp-core`
-2. `cargo publish -p hanzo-mcp-client`
-3. `cargo publish -p hanzo-mcp-server`
-4. `cargo publish -p hanzo-mcp`
-
-After publishing, update dependent projects to use crates.io version:
-```toml
-hanzo-mcp = "0.1"
-```
 
 ## Future: Distributed Compute Network
 

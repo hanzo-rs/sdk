@@ -1,355 +1,132 @@
-name: Release & Publish
+name: Publish
+# Publishing a crate = pushing the tag `<crate>-v<semver>`. The tag names the
+# crate and it names the version; nothing else votes. One crate per tag, so N
+# crates is N tags — which is exactly what lets `hanzo-client` release on the
+# spec's cadence while the hand-written crates release on their own.
+#
+# What died here, and why:
+#   · the four hard-coded `publish_<crate>` booleans (20 `echo`s to decide one
+#     string) — the tag already carries the crate name;
+#   · the workspace-wide `v*` tag that published three crates at once — a second
+#     way to do the one thing this file does, and it ran `cd crates/hanzo-pqc`,
+#     a directory deleted from this workspace. It could not have succeeded again;
+#   · the 5-target build matrix — `cargo publish` verifies by building the packed
+#     .crate, which is a stronger gate than building the working tree, and the
+#     `test:` block in hanzo.yml already gates every commit that reaches a tag;
+#   · git-cliff, the gh-pages docs deploy and the Slack notify — none of them is
+#     "put this crate on crates.io", and each was its own failure surface between
+#     a green build and a published crate.
+#
+# `ubuntu-latest`, not the arc pool: measured 2026-08-01, hanzoai/js-sdk's publish
+# job requested `hanzo-build-linux-amd64`, was never assigned a runner, sat 24h
+# and was cancelled — and that release reached npm only because a human ran
+# `npm publish` by hand. A publish that cannot be scheduled is a car that cannot
+# move. Image builds still belong on the arc pool; this packs a tarball.
 
 on:
   push:
-    tags:
-      - 'v*'
-      - 'hanzo-message-primitives-*'
-      - 'hanzo-pqc-*'
-      - 'hanzo-kbs-*'
-      - 'hanzo-agent-proxy-*'
-      # The generated API client releases on the spec's cadence, not the
-      # hand-written crates'. Tag it `hanzo-client-vX.Y.Z`.
-      - 'hanzo-client-*'
+    tags: ['*-v[0-9]+.[0-9]+.[0-9]+']
   workflow_dispatch:
     inputs:
       crate:
-        description: 'Crate to publish (hanzo-message-primitives, hanzo-pqc, hanzo-kbs, hanzo-agent-proxy, or all)'
+        description: 'Crate to publish — its Cargo.toml version is the version'
         required: true
-        default: 'all'
-        type: choice
-        options:
-          - all
-          - hanzo-message-primitives
-          - hanzo-pqc
-          - hanzo-kbs
-          - hanzo-agent-proxy
-      dry_run:
-        description: 'Dry run (do not actually publish)'
-        required: false
-        default: false
-        type: boolean
+        type: string
 
-env:
-  CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
+concurrency:
+  # Never cancel a publish. crates.io does not take anything back, so a cancelled
+  # run is indistinguishable from a run that half happened.
+  group: publish-${{ github.event.inputs.crate || github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  # Determine which crates to publish
-  prepare:
-    name: Prepare Release
-    runs-on: ubuntu-latest
-    outputs:
-      publish_message_primitives: ${{ steps.determine.outputs.publish_message_primitives }}
-      publish_pqc: ${{ steps.determine.outputs.publish_pqc }}
-      publish_kbs: ${{ steps.determine.outputs.publish_kbs }}
-      publish_agent_proxy: ${{ steps.determine.outputs.publish_agent_proxy }}
-      version: ${{ steps.version.outputs.version }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Determine crates to publish
-        id: determine
-        run: |
-          TAG="${{ github.ref_name }}"
-          echo "Processing tag: $TAG"
-          
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            case "${{ github.event.inputs.crate }}" in
-              "all")
-                echo "publish_message_primitives=true" >> $GITHUB_OUTPUT
-                echo "publish_pqc=true" >> $GITHUB_OUTPUT
-                echo "publish_kbs=true" >> $GITHUB_OUTPUT
-                echo "publish_agent_proxy=true" >> $GITHUB_OUTPUT
-                ;;
-              "hanzo-message-primitives")
-                echo "publish_message_primitives=true" >> $GITHUB_OUTPUT
-                echo "publish_pqc=false" >> $GITHUB_OUTPUT
-                echo "publish_kbs=false" >> $GITHUB_OUTPUT
-                echo "publish_agent_proxy=false" >> $GITHUB_OUTPUT
-                ;;
-              "hanzo-pqc")
-                echo "publish_message_primitives=false" >> $GITHUB_OUTPUT
-                echo "publish_pqc=true" >> $GITHUB_OUTPUT
-                echo "publish_kbs=false" >> $GITHUB_OUTPUT
-                echo "publish_agent_proxy=false" >> $GITHUB_OUTPUT
-                ;;
-              "hanzo-kbs")
-                echo "publish_message_primitives=false" >> $GITHUB_OUTPUT
-                echo "publish_pqc=false" >> $GITHUB_OUTPUT
-                echo "publish_kbs=true" >> $GITHUB_OUTPUT
-                echo "publish_agent_proxy=false" >> $GITHUB_OUTPUT
-                ;;
-              "hanzo-agent-proxy")
-                echo "publish_message_primitives=false" >> $GITHUB_OUTPUT
-                echo "publish_pqc=false" >> $GITHUB_OUTPUT
-                echo "publish_kbs=false" >> $GITHUB_OUTPUT
-                echo "publish_agent_proxy=true" >> $GITHUB_OUTPUT
-                ;;
-            esac
-          else
-            # Tag-based release - match Python SDK pattern
-            if [[ "$TAG" == hanzo-message-primitives-* ]]; then
-              echo "publish_message_primitives=true" >> $GITHUB_OUTPUT
-              echo "publish_pqc=false" >> $GITHUB_OUTPUT
-              echo "publish_kbs=false" >> $GITHUB_OUTPUT
-              echo "publish_agent_proxy=false" >> $GITHUB_OUTPUT
-            elif [[ "$TAG" == hanzo-pqc-* ]]; then
-              echo "publish_message_primitives=false" >> $GITHUB_OUTPUT
-              echo "publish_pqc=true" >> $GITHUB_OUTPUT
-              echo "publish_kbs=false" >> $GITHUB_OUTPUT
-              echo "publish_agent_proxy=false" >> $GITHUB_OUTPUT
-            elif [[ "$TAG" == hanzo-kbs-* ]]; then
-              echo "publish_message_primitives=false" >> $GITHUB_OUTPUT
-              echo "publish_pqc=false" >> $GITHUB_OUTPUT
-              echo "publish_kbs=true" >> $GITHUB_OUTPUT
-              echo "publish_agent_proxy=false" >> $GITHUB_OUTPUT
-            elif [[ "$TAG" == hanzo-agent-proxy-* ]]; then
-              echo "publish_message_primitives=false" >> $GITHUB_OUTPUT
-              echo "publish_pqc=false" >> $GITHUB_OUTPUT
-              echo "publish_kbs=false" >> $GITHUB_OUTPUT
-              echo "publish_agent_proxy=true" >> $GITHUB_OUTPUT
-            elif [[ "$TAG" == v* ]]; then
-              # General version tag publishes all packages
-              echo "publish_message_primitives=true" >> $GITHUB_OUTPUT
-              echo "publish_pqc=true" >> $GITHUB_OUTPUT
-              echo "publish_kbs=true" >> $GITHUB_OUTPUT
-              echo "publish_agent_proxy=true" >> $GITHUB_OUTPUT
-            else
-              echo "Unknown tag pattern: $TAG"
-              echo "publish_message_primitives=false" >> $GITHUB_OUTPUT
-              echo "publish_pqc=false" >> $GITHUB_OUTPUT
-              echo "publish_kbs=false" >> $GITHUB_OUTPUT
-              echo "publish_agent_proxy=false" >> $GITHUB_OUTPUT
-            fi
-          fi
-          
-          echo "Publishing decisions:"
-          echo "  message-primitives: $(grep publish_message_primitives $GITHUB_OUTPUT || echo 'false')"
-          echo "  pqc: $(grep publish_pqc $GITHUB_OUTPUT || echo 'false')"
-          echo "  kbs: $(grep publish_kbs $GITHUB_OUTPUT || echo 'false')"
-          echo "  agent-proxy: $(grep publish_agent_proxy $GITHUB_OUTPUT || echo 'false')"
-      - name: Extract version
-        id: version
-        run: |
-          TAG="${{ github.ref_name }}"
-          VERSION=""
-          
-          # Extract version from different tag patterns
-          if [[ "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+.*) ]]; then
-            VERSION="${BASH_REMATCH[1]}"
-          elif [[ "$TAG" =~ -v?([0-9]+\.[0-9]+\.[0-9]+.*) ]]; then
-            VERSION="${BASH_REMATCH[1]}"
-          else
-            VERSION="unknown"
-          fi
-          
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Extracted version: $VERSION from tag: $TAG"
-
-  # Build and test release artifacts
-  build:
-    name: Build Release
-    needs: prepare
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-          - os: macos-latest
-            target: x86_64-apple-darwin
-          - os: macos-latest
-            target: aarch64-apple-darwin
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-      - uses: Swatinem/rust-cache@v2
-      - name: Install musl tools
-        if: matrix.target == 'x86_64-unknown-linux-musl'
-        run: sudo apt-get install -y musl-tools
-      - name: Build release
-        run: cargo build --release --all --target ${{ matrix.target }}
-      - name: Run tests
-        if: matrix.target != 'aarch64-apple-darwin'  # Can't run aarch64 tests on x86_64
-        run: cargo test --release --all --target ${{ matrix.target }}
-
-  # Verify crate packages
-  verify:
-    name: Verify Packages
-    needs: [prepare, build]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Verify hanzo-message-primitives
-        if: needs.prepare.outputs.publish_message_primitives == 'true'
-        run: |
-          cd crates/hanzo-message-primitives
-          cargo publish --dry-run
-      - name: Verify hanzo-pqc
-        if: needs.prepare.outputs.publish_pqc == 'true'
-        run: |
-          cd crates/hanzo-pqc
-          cargo publish --dry-run
-      - name: Verify hanzo-agent-proxy
-        if: needs.prepare.outputs.publish_agent_proxy == 'true'
-        run: |
-          cd crates/hanzo-agent-proxy
-          cargo publish --dry-run
-      # hanzo-kbs is a standalone workspace with external deps - skip for now
-      # - name: Verify hanzo-kbs
-      #   if: needs.prepare.outputs.publish_kbs == 'true'
-      #   run: |
-      #     cd crates/hanzo-kbs
-      #     cargo publish --dry-run
-
-  # Generate changelog
-  changelog:
-    name: Generate Changelog
-    needs: [prepare, verify]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Generate changelog
-        uses: orhun/git-cliff-action@v4
-        id: git-cliff
-        with:
-          config: .github/cliff.toml
-          args: -v --latest --strip header
-        env:
-          OUTPUT: CHANGELOG.md
-      - name: Upload changelog
-        uses: actions/upload-artifact@v4
-        with:
-          name: changelog
-          path: CHANGELOG.md
-
-  # Publish to crates.io
   publish:
-    name: Publish Crates
-    needs: [prepare, build, verify, changelog]
-    runs-on: ubuntu-latest
-    if: github.event.inputs.dry_run != 'true'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Login to crates.io
-        run: cargo login ${{ secrets.CARGO_REGISTRY_TOKEN }}
-      
-      # Publish in dependency order
-      - name: Publish hanzo-message-primitives
-        if: needs.prepare.outputs.publish_message_primitives == 'true'
-        run: |
-          cd crates/hanzo-message-primitives
-          cargo publish --no-verify
-          # Wait for crates.io to index
-          sleep 30
-      
-      - name: Publish hanzo-pqc
-        if: needs.prepare.outputs.publish_pqc == 'true'
-        run: |
-          cd crates/hanzo-pqc
-          cargo publish --no-verify
-          sleep 30
-
-      - name: Publish hanzo-agent-proxy
-        if: needs.prepare.outputs.publish_agent_proxy == 'true'
-        run: |
-          cd crates/hanzo-agent-proxy
-          cargo publish --no-verify
-          sleep 30
-
-      # hanzo-client is generated from hanzoai/openapi hanzo.yaml and depends on
-      # no other crate in this workspace, so it publishes on its own tag and in
-      # no particular order. --no-verify for the same reason as the others: the
-      # release build already compiled it.
-      - name: Publish hanzo-client
-        if: startsWith(github.ref, 'refs/tags/hanzo-client-')
-        run: |
-          cd crates/hanzo-client
-          cargo publish --no-verify
-          sleep 30
-
-      # hanzo-kbs is a standalone workspace with external deps - skip for now
-      # - name: Publish hanzo-kbs
-      #   if: needs.prepare.outputs.publish_kbs == 'true'
-      #   run: |
-      #     cd crates/hanzo-kbs
-      #     cargo publish --no-verify
-
-  # Create GitHub Release
-  release:
-    name: Create Release
-    needs: [prepare, publish]
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-    steps:
-      - uses: actions/checkout@v4
-      - name: Download changelog
-        uses: actions/download-artifact@v4
-        with:
-          name: changelog
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          body_path: CHANGELOG.md
-          draft: false
-          prerelease: ${{ contains(needs.prepare.outputs.version, '-') }}
-          files: |
-            LICENSE-MIT
-            LICENSE-APACHE
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # Update documentation
-  docs:
-    name: Deploy Documentation
-    needs: publish
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - name: Build documentation
-        run: |
-          cargo doc --workspace --no-deps --document-private-items
-          echo '<meta http-equiv="refresh" content="0; url=hanzo_pqc/index.html">' > target/doc/index.html
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./target/doc
-          cname: rust-sdk.hanzo.ai
 
-  # Notify on completion
-  notify:
-    name: Notify Completion
-    needs: [prepare, publish, release, docs]
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Send notification
-        uses: 8398a7/action-slack@v3
-        if: env.SLACK_WEBHOOK_URL != ''
-        with:
-          status: ${{ job.status }}
-          text: |
-            Release ${{ needs.prepare.outputs.version }} completed!
-            Published crates:
-            - hanzo-message-primitives: ${{ needs.prepare.outputs.publish_message_primitives }}
-            - hanzo-pqc: ${{ needs.prepare.outputs.publish_pqc }}
-            - hanzo-kbs: ${{ needs.prepare.outputs.publish_kbs }}
-            - hanzo-agent-proxy: ${{ needs.prepare.outputs.publish_agent_proxy }}
-          webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      - name: Read the crate and the version out of the tag
+        id: what
+        # A workflow_dispatch has no tag, so the manifest is the version. A tag
+        # has both, and they must agree — a tag naming a version the manifest
+        # does not hold would publish something other than what it says.
+        run: |
+          set -euo pipefail
+          CRATE='${{ github.event.inputs.crate }}'
+          TAG_VERSION=''
+          if [ -z "$CRATE" ]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+            CRATE="${TAG%-v*}"
+            TAG_VERSION="${TAG##*-v}"
+          fi
+          MANIFEST="$(cargo metadata --no-deps --format-version 1 \
+            | jq -r --arg c "$CRATE" '.packages[] | select(.name == $c) | .version')"
+          [ -n "$MANIFEST" ] || { echo "::error::no crate named $CRATE in this workspace"; exit 1; }
+          if [ -n "$TAG_VERSION" ] && [ "$TAG_VERSION" != "$MANIFEST" ]; then
+            echo "::error::tag says $CRATE $TAG_VERSION, Cargo.toml says $MANIFEST"
+            exit 1
+          fi
+          echo "crate=$CRATE"      >> "$GITHUB_OUTPUT"
+          echo "version=$MANIFEST" >> "$GITHUB_OUTPUT"
+          echo "publishing $CRATE $MANIFEST"
+
+      - name: Pack
+        # Packing before the registry check is what makes the check meaningful:
+        # it produces the exact bytes crates.io would store, so "already there"
+        # is answered by digest rather than by name.
+        run: cargo package -p '${{ steps.what.outputs.crate }}'
+
+      - name: Already published?
+        id: exists
+        # Idempotence, stated as a rule: a version that exists with OUR digest is
+        # success — re-running the same tag is a no-op, which is what makes a
+        # resumable release possible. A version that exists with a DIFFERENT
+        # digest is a hard failure, because someone published out of band and the
+        # tag no longer describes what a consumer receives.
+        run: |
+          set -euo pipefail
+          CRATE='${{ steps.what.outputs.crate }}'
+          VERSION='${{ steps.what.outputs.version }}'
+          OURS="$(sha256sum "target/package/$CRATE-$VERSION.crate" | cut -d' ' -f1)"
+          echo "ours=$OURS" >> "$GITHUB_OUTPUT"
+          THEIRS="$(curl -sS -H 'User-Agent: hanzo-release (dev@hanzo.ai)' \
+            "https://crates.io/api/v1/crates/$CRATE/$VERSION" | jq -r '.version.checksum // empty')"
+          if [ -z "$THEIRS" ]; then
+            echo "done=false" >> "$GITHUB_OUTPUT"
+          elif [ "$THEIRS" = "$OURS" ]; then
+            echo "done=true" >> "$GITHUB_OUTPUT"
+            echo "$CRATE $VERSION is already on crates.io with this exact digest — nothing to do"
+          else
+            echo "::error::$CRATE $VERSION is on crates.io with digest $THEIRS, but this tag packs $OURS"
+            exit 1
+          fi
+
+      - name: Publish
+        if: steps.exists.outputs.done == 'false'
+        # No --no-verify. The verification build compiles the packed .crate as a
+        # consumer receives it, which is the only build that proves the uploaded
+        # thing works — a working tree can compile while the package is missing
+        # a file the tree happened to have.
+        run: cargo publish -p '${{ steps.what.outputs.crate }}'
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+      - name: Prove it from outside
+        # The receipt is what crates.io says, not what cargo said. Poll the public
+        # API until the version is there and its checksum is the one we packed.
+        run: |
+          set -euo pipefail
+          CRATE='${{ steps.what.outputs.crate }}'
+          VERSION='${{ steps.what.outputs.version }}'
+          for _ in $(seq 1 30); do
+            THEIRS="$(curl -sS -H 'User-Agent: hanzo-release (dev@hanzo.ai)' \
+              "https://crates.io/api/v1/crates/$CRATE/$VERSION" | jq -r '.version.checksum // empty')"
+            if [ "$THEIRS" = '${{ steps.exists.outputs.ours }}' ]; then
+              echo "crates.io serves $CRATE $VERSION at $THEIRS"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::crates.io never served $CRATE $VERSION with our digest"
+          exit 1

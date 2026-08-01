@@ -162,13 +162,16 @@ mod tests {
 
 ### Release Process
 
-1. Update version numbers in `Cargo.toml` files
-2. Update `CHANGELOG.md`
-3. Run `./scripts/check-release.sh`
-4. Create a release PR
-5. After merge, tag the release: `git tag v0.1.0`
-6. Push tags: `git push origin v0.1.0`
-7. GitHub Actions will handle the rest
+One crate per tag, `<crate>-v<semver>`.
+
+1. Bump that crate's `version` in its `Cargo.toml` — a patch bump, `x.y.Z+1`
+2. Merge it
+3. `git tag <crate>-v<semver> && git push origin <crate>-v<semver>`
+
+`.github/workflows/release.yml` refuses the tag if the manifest says a different
+version, packs, publishes, and then proves the version against the public
+crates.io API. Re-pushing an already-published tag is a no-op when the digest
+matches and a hard failure when it does not.
 
 ## Community
 

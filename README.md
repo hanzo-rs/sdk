@@ -179,17 +179,18 @@ cargo build --release --all
 
 ## Releasing
 
-This monorepo supports per-package releases:
+One crate per tag, `<crate>-v<semver>`. The tag names what is published and at
+which version; `.github/workflows/release.yml` reads both out of it, refuses if
+the crate's `Cargo.toml` disagrees, and proves the result against the crates.io
+API before it goes green.
 
 ```bash
-# Release a single package
-./scripts/release-package.sh hanzo-kbs 0.1.1
-
-# Release all packages
-./scripts/release-package.sh all 0.2.0
+# Publish hanzo-client 0.1.0 — the version must already be in its Cargo.toml
+git tag hanzo-client-v0.1.0 && git push origin hanzo-client-v0.1.0
 ```
 
-See [PUBLISHING.md](PUBLISHING.md) for detailed release instructions.
+Re-pushing a tag that is already published is a no-op when the packed digest
+matches what crates.io serves, and a hard failure when it does not.
 
 ## License
 
