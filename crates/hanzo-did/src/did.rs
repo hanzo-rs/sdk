@@ -472,7 +472,7 @@ impl Network {
     pub fn rpc_endpoint(&self) -> Option<&'static str> {
         match self {
             Network::Hanzo => Some("https://rpc.hanzo.ai"),
-            Network::Lux => Some("https://api.lux.network/ext/bc/C/rpc"),
+            Network::Lux => Some("https://api.lux.network/v1/bc/C/rpc"),
             Network::Pars => Some("https://rpc.pars.network"),
             Network::SparklePony => Some("https://rpc.sparklepony.xyz"),
             Network::Zoo => Some("https://rpc.zoo.network"),
@@ -483,7 +483,7 @@ impl Network {
             Network::Polygon => Some("https://polygon-rpc.com"),
             Network::Arbitrum => Some("https://arb1.arbitrum.io/rpc"),
             Network::Optimism => Some("https://mainnet.optimism.io"),
-            Network::LuxFuji => Some("https://api.lux-test.network/ext/bc/C/rpc"),
+            Network::LuxFuji => Some("https://api.lux-test.network/v1/bc/C/rpc"),
             _ => None,
         }
     }
@@ -730,7 +730,7 @@ mod tests {
         assert_eq!(Network::Hanzo.rpc_endpoint(), Some("https://rpc.hanzo.ai"));
         assert_eq!(
             Network::Lux.rpc_endpoint(),
-            Some("https://api.lux.network/ext/bc/C/rpc")
+            Some("https://api.lux.network/v1/bc/C/rpc")
         );
     }
 
