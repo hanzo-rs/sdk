@@ -30,7 +30,7 @@ tokio = { version = "1", features = ["full"] }
 regex = { version = "1.10", optional = true }
 
 # Rate limiting
-governor = { version = "0.8", optional = true }
+governor = { version = "0.10", optional = true }
 
 # Content filter (calls to zen-guard API)
 reqwest = { version = "0.12", features = ["json"], optional = true }
