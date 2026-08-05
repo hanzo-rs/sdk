@@ -10,7 +10,7 @@ repository.workspace = true
 [dependencies]
 # Internal crates
 hanzo-agent = { workspace = true }
-hanzo-mcp = { workspace = true }
+hanzo-mcp-client = { workspace = true }
 futures = { workspace = true }
 
 # Core

@@ -2,7 +2,10 @@
 //!
 //! This crate provides the foundational abstractions used by:
 //! - `hanzo-mcp-client` - Client for connecting to MCP servers
-//! - `hanzo-mcp-server` - Server implementation with tools
+//!
+//! The server side is not here. `hanzo-mcp` on crates.io is published from
+//! github.com/hanzoai/mcp (its `rust/` directory) and ships the tool server
+//! binary. This repo is client-side only.
 //!
 //! # Overview
 //!

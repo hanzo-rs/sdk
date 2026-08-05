@@ -174,8 +174,6 @@ rust-sdk/
 │   ├── hanzo-agent/             # Agent framework (tool calling)
 │   ├── hanzo-mcp-core/          # MCP shared traits and types
 │   ├── hanzo-mcp-client/        # MCP client (connects to servers)
-│   ├── hanzo-mcp-server/        # MCP server (exposes tools)
-│   ├── hanzo-mcp/               # Unified MCP re-export crate
 │   ├── hanzo-agents/            # Specialized agents (architect, cto, reviewer)
 │   └── [disabled crates]        # Need refactoring for clean separation
 ```
@@ -194,14 +192,44 @@ rust-sdk/
 
 ### MCP (Model Context Protocol)
 
-The MCP implementation is the **canonical Rust implementation** for all Hanzo projects. It consolidates functionality from `mistralrs-mcp` and provides a unified interface.
+**This repo is the MCP _client_ side. It does not own the `hanzo-mcp` name.**
 
 | Crate | Purpose | Status |
 |-------|---------|--------|
 | `hanzo-mcp-core` | Core traits, types, and **McpClientConfig/McpServerConfig** | Active |
 | `hanzo-mcp-client` | Client with **McpClient** orchestrator + low-level methods | Active |
-| `hanzo-mcp-server` | Server implementation with tools (jsonrpc-based) | Active |
-| `hanzo-mcp` | Unified crate that re-exports all MCP functionality | Active |
+
+`hanzo-mcp` on crates.io is published from **github.com/hanzoai/mcp**, out of its
+`rust/` directory. That is the tool server: it ships a `hanzo-mcp` binary that
+answers `tools/list` with 30 tools over stdio. Depend on it for anything
+server-side; do not add a server crate here.
+
+#### Why two crates were deleted on 2026-08-05
+
+Both repos published the same name, and this one won the race with less code.
+`hanzoai/mcp` published working tools as `hanzo-mcp` 1.1.12; this repo's facade
+then published 1.1.21 over it. What `cargo add hanzo-mcp` resolved for three
+months:
+
+```
+$ cargo install hanzo-mcp --version 1.1.21
+error: there is nothing to install in `hanzo-mcp v1.1.21`, because it has no binaries
+
+ToolRegistry::with_defaults().list()   // features = ["server"]
+=> []                                  // 0 tools
+```
+
+- **`hanzo-mcp`** here was one file re-exporting core+client. Its only consumer,
+  `hanzo-agents`, used exactly one item — `mcp_methods` — which lives in
+  `hanzo-mcp-client`. It now depends on that crate directly.
+- **`hanzo-mcp-server`** here was a copy of `hanzoai/mcp`'s `rust/` tree with 12
+  of its 14 tools deleted. Its `tools/mod.rs` said the rest "will be loaded from
+  `/Users/z/work/hanzo/tools/rust/*`" — a laptop path, shipped to crates.io. Its
+  six `#[cfg(feature)]` blocks call `.register()` on an immutable binding and
+  name modules that are commented out, so no feature combination has ever
+  compiled. Nothing depended on it once the facade went.
+
+Neither published version is yanked. `hanzoai/mcp` fixed forward at 1.1.22.
 
 ### AI/ML Integration
 
@@ -230,34 +258,29 @@ hanzo-mcp-core     ────────────────────�
     │              Shared types, traits, error handling
     │              (no external MCP dependencies)
     │
-    ├─── hanzo-mcp-client ──────────────────────────────
-    │         │            Connect TO MCP servers
-    │         │            Uses: rmcp crate
-    │         │
-    │         └─── Transports: HTTP, SSE, Process (stdio)
-    │
-    └─── hanzo-mcp-server ──────────────────────────────
-              │            BE an MCP server
-              │            Uses: jsonrpc-core
+    └─── hanzo-mcp-client ──────────────────────────────
+              │            Connect TO MCP servers
+              │            Uses: rmcp crate
               │
-              └─── Tools: Search, AST, Personalities
+              └─── Transports: HTTP, SSE, Process (stdio)
+
+  (BE an MCP server: hanzo-mcp on crates.io, from github.com/hanzoai/mcp)
 ```
 
-### Using the Unified Crate
-
-For most use cases, depend on `hanzo-mcp`:
+### Depending on it
 
 ```toml
 [dependencies]
-hanzo-mcp = { version = "0.1" }                    # Client only (default)
-hanzo-mcp = { version = "0.1", features = ["server"] }  # Include server
-hanzo-mcp = { version = "0.1", features = ["full"] }    # Everything
+hanzo-mcp-client = "1.1.21"   # connect to MCP servers
+hanzo-mcp-core   = "1.1.21"   # shared types only
+
+hanzo-mcp = "1.1.22"          # BE a server — different repo, hanzoai/mcp
 ```
 
 ### As a Client (Recommended: McpClient)
 
 ```rust
-use hanzo_mcp::{McpClient, McpClientConfig, McpServerConfig, McpServerSource};
+use hanzo_mcp_client::{McpClient, McpClientConfig, McpServerConfig, McpServerSource};
 
 // Configure multi-server client
 let config = McpClientConfig {
@@ -309,7 +332,7 @@ let content = client.read_resource("file:///path/to/resource").await?;
 For simple one-off operations:
 
 ```rust
-use hanzo_mcp::mcp_methods;
+use hanzo_mcp_client::mcp_methods;
 
 // List tools from an MCP server
 let tools = mcp_methods::list_tools_via_http("http://localhost:3333", None).await?;
@@ -331,7 +354,9 @@ let content = mcp_methods::read_resource_via_http("http://localhost:3333", "file
 ### As a Server
 
 ```rust
-use hanzo_mcp::server::{Config, MCPServer};
+// Server lives in github.com/hanzoai/mcp, published as hanzo-mcp >= 1.1.22.
+// Run the binary; do not link a server from this repo.
+//   cargo install hanzo-mcp && hanzo-mcp
 
 let config = Config::default();
 let server = MCPServer::new(config, 3333)?;
@@ -345,7 +370,7 @@ server.run().await?;
 - SSE (SseClientTransport)
 - Child process (TokioChildProcess/stdio)
 
-**Server (hanzo-mcp-server):**
+**Server (`hanzo-mcp`, github.com/hanzoai/mcp):**
 - HTTP (jsonrpc-http-server)
 
 ## Agent System
@@ -419,12 +444,12 @@ The node uses these crates for:
 
 ### hanzo-engine Integration
 
-The engine (mistralrs fork) should migrate to use `hanzo-mcp` from rust-sdk. The `mistralrs-mcp` crate's configuration types (`McpClientConfig`, `McpServerConfig`, `McpServerSource`) have been merged into `hanzo-mcp-core`.
+The engine (mistralrs fork) should migrate to use `hanzo-mcp-client` from rust-sdk. The `mistralrs-mcp` crate's configuration types (`McpClientConfig`, `McpServerConfig`, `McpServerSource`) have been merged into `hanzo-mcp-core`.
 
 **Migration path for hanzo-engine:**
 1. Add `hanzo-mcp` dependency with workspace reference
-2. Replace `mistralrs_mcp::McpClientConfig` → `hanzo_mcp::McpClientConfig`
-3. Replace transport creation with `hanzo_mcp::McpClient`
+2. Replace `mistralrs_mcp::McpClientConfig` → `hanzo_mcp_client::McpClientConfig`
+3. Replace transport creation with `hanzo_mcp_client::McpClient`
 4. Keep engine-specific tool callback integration in `mistralrs-mcp` (PyO3 bindings, etc.)
 
 ### Architecture Diagram
@@ -500,21 +525,23 @@ To enable a disabled crate:
 
 ## Migration Guide
 
-All Hanzo Rust projects should use `hanzo-mcp` from rust-sdk as the canonical MCP implementation.
+Client side: `hanzo-mcp-client` from this repo.
+Server side: `hanzo-mcp` from github.com/hanzoai/mcp.
+One name, one publisher, each.
 
 ### For hanzo-node
 
-Replace the local `hanzo_mcp` crate with the rust-sdk version:
+Replace the local `hanzo_mcp` crate with the published client:
 
 ```toml
 # In hanzo-node/Cargo.toml workspace dependencies
 # BEFORE
-hanzo_mcp = { path = "./crates/hanzo-mcp" }
+hanzo_mcp = { path = "./crates/hanzo-mcp" }  # dead
 
 # AFTER
-hanzo-mcp = { git = "https://github.com/hanzoai/rust-sdk", version = "0.1" }
+hanzo-mcp-client = "1.1.21"   # this repo, client side
 # Or after publishing to crates.io:
-hanzo-mcp = "0.1"
+hanzo-mcp-client = "1.1.21"
 ```
 
 The API is compatible - `mcp_methods` functions have the same signatures.
@@ -528,24 +555,24 @@ The config types have been merged into hanzo-mcp-core. Update imports:
 use mistralrs_mcp::{McpClientConfig, McpServerConfig, McpServerSource};
 
 // AFTER
-use hanzo_mcp::{McpClientConfig, McpServerConfig, McpServerSource, McpClient};
+use hanzo_mcp_client::{McpClientConfig, McpServerConfig, McpServerSource, McpClient};
 ```
 
-Keep engine-specific code (PyO3 bindings, utoipa) in mistralrs-mcp but depend on hanzo-mcp for shared types.
+Keep engine-specific code (PyO3 bindings, utoipa) in mistralrs-mcp but depend on hanzo-mcp-core for shared types.
 
 ```toml
 # In hanzo-engine/mistralrs-mcp/Cargo.toml
 [dependencies]
-hanzo-mcp = { git = "https://github.com/hanzoai/rust-sdk", version = "0.1" }
+hanzo-mcp-client = "1.1.21"   # this repo, client side
 ```
 
 ### For hanzo-dev (codex-rs)
 
-The `codex-rmcp-client` can use hanzo-mcp for MCP operations:
+The `codex-rmcp-client` can use hanzo-mcp-client for MCP operations:
 
 ```toml
 # In codex-rs/Cargo.toml
-hanzo-mcp = { git = "https://github.com/hanzoai/rust-sdk", version = "0.1" }
+hanzo-mcp-client = "1.1.21"   # this repo, client side
 ```
 
 ### The six flows come from `flows.yaml`

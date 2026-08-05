@@ -122,7 +122,7 @@ impl ToolRegistry {
 
     /// Discover tools from an MCP server
     async fn discover_mcp_tools(&self, config: &McpServerConfig) -> Result<Vec<String>> {
-        use hanzo_mcp::mcp_methods;
+        use hanzo_mcp_client::mcp_methods;
 
         let tools = match &config.connection {
             McpConnection::Http { url } => mcp_methods::list_tools_via_http(url, None)
@@ -246,7 +246,7 @@ async fn execute_mcp_tool(
     tool_name: &str,
     params: serde_json::Map<String, serde_json::Value>,
 ) -> Result<String> {
-    use hanzo_mcp::mcp_methods;
+    use hanzo_mcp_client::mcp_methods;
 
     let result = match &config.connection {
         McpConnection::Http { url } => {
