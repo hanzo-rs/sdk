@@ -175,7 +175,7 @@ matches and a hard failure when it does not.
 
 ## Community
 
-- Join our [Discord](https://discord.gg/hanzoai)
+- Join our [Discord](https://discord.gg/CJCyAsm9Vr)
 - Follow us on [Twitter](https://twitter.com/hanzoai)
 - Read our [blog](https://blog.hanzo.ai)
 
