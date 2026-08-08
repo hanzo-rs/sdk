@@ -1,50 +1,45 @@
 #!/usr/bin/env bash
 # Regenerate the Hanzo API client crate from the unified OpenAPI spec.
 #
-# The ONE way: hanzoai/openapi `hanzo.yaml` is the single source of truth. The
-# `hanzo-client` crate is generated from it with openapi-generator (rust) — no
-# Stainless, no hand-drift. Never edit crates/hanzo-client/src; edit the
-# per-service spec in hanzoai/openapi and regenerate.
+# The ONE way: hanzoai/cloud's own `openapi.yaml`, at the ref `.spec-lock` names,
+# read from git.hanzo.ai. The `hanzo-client` crate is generated from it with
+# openapi-generator (rust) — no Stainless, no hand-drift. Never edit
+# crates/hanzo-client/src; change the handler in hanzoai/cloud and regenerate.
 #
-#   ./scripts/generate.sh                            # pulls spec from hanzoai/openapi@main
-#   SPEC=/path/to/hanzo.yaml ./scripts/generate.sh   # local spec override
+#   ./scripts/generate.sh                     # the document .spec-lock names
+#   SPEC=/path/to/openapi.yaml ./scripts/generate.sh
 #
-# hanzoai/openapi is PRIVATE today. raw.githubusercontent.com only serves public
-# repos, so the plain URL 404s; when that happens this falls back to the GitHub
-# API with a token (SPEC_TOKEN, or GH_TOKEN/GITHUB_TOKEN, or `gh auth token`)
-# and says so. SPEC_URL overrides the URL, SPEC overrides the file.
-#
-# Requires: java 17+, curl, cargo.
+# Requires: java 17+, curl, cargo, FORGE_TOKEN (contents:read on hanzoai/cloud).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 GENERATOR_VERSION="${GENERATOR_VERSION:-7.14.0}"
 SPEC_REPO="${SPEC_REPO:-hanzoai/openapi}"
-SPEC_REF="${SPEC_REF:-main}"
-SPEC_URL="${SPEC_URL:-https://raw.githubusercontent.com/${SPEC_REPO}/${SPEC_REF}/hanzo.yaml}"
 SPEC="${SPEC:-}"
 JAR="${JAR:-${TMPDIR:-/tmp}/openapi-generator-cli-${GENERATOR_VERSION}.jar}"
 
 check=0
 [ "${1:-}" = "--check" ] && check=1
 
+# THE DOCUMENT COMES FROM THE FORGE, AT THE REF THIS TREE NAMES. hanzoai/ci's
+# client lane exports SPEC by value, already digest-checked; without it, read
+# .spec-lock and fetch the same bytes ourselves. What stood here reached for
+# raw.githubusercontent.com and then api.github.com, neither of which serves this
+# document: the GitHub side is a mirror thousands of commits behind, so the
+# "public fetch first, token fallback" ladder was two spellings of one 404 and
+# the message blamed the credential. One host, one credential, one ref.
 if [ -z "$SPEC" ]; then
   SPEC="$(mktemp)"
-  # Public fetch first: it is the plain path, needs no credential, and starts
-  # working the day hanzoai/openapi opens. While the repo is private GitHub
-  # answers 404 rather than 403, so an anonymous miss is indistinguishable from
-  # a deleted file — hence the fallback below, which says which case it was.
-  # Both paths use curl -f under set -e, so a failed fetch stops the script
-  # instead of regenerating from a stale spec.
-  if ! curl -fsSL "$SPEC_URL" -o "$SPEC"; then
-    TOKEN="${SPEC_TOKEN:-${GH_TOKEN:-${GITHUB_TOKEN:-$(gh auth token 2>/dev/null || true)}}}"
-    : "${TOKEN:?$SPEC_URL is not readable anonymously and no SPEC_TOKEN/GH_TOKEN is set. $SPEC_REPO is private; supply a token with contents:read, or pass SPEC=/path/to/hanzo.yaml}"
-    echo "note: $SPEC_URL returned no spec ($SPEC_REPO is private) - reading it through the GitHub API instead" >&2
-    curl -fsSL \
-      -H "Authorization: Bearer $TOKEN" \
-      -H "Accept: application/vnd.github.raw" \
-      "https://api.github.com/repos/${SPEC_REPO}/contents/hanzo.yaml?ref=${SPEC_REF}" -o "$SPEC"
-  fi
+  ref="$(sed -n 's/^ref=//p' .spec-lock)"
+  want="$(sed -n 's/^sha256=//p' .spec-lock)"
+  : "${ref:?no .spec-lock — this tree does not name a document}"
+  : "${FORGE_TOKEN:?reading ${SPEC_REPO} from git.hanzo.ai needs FORGE_TOKEN (contents:read), or pass SPEC=/path/to/the/document}"
+  curl -fsSL -H "Authorization: token $FORGE_TOKEN" \
+    "https://git.hanzo.ai/v1/repos/hanzoai/cloud/raw/openapi.yaml?ref=$ref" -o "$SPEC"
+  got="$(sha256sum "$SPEC" | cut -d' ' -f1)"
+  # A pinned ref whose bytes moved means someone moved a tag, and no amount of
+  # regenerating makes that safe.
+  [ "$got" = "$want" ] || { echo "hanzoai/cloud@$ref:openapi.yaml hashes to $got, but .spec-lock says $want — the ref moved under this projection" >&2; exit 1; }
 fi
 
 if [ ! -f "$JAR" ]; then
@@ -72,7 +67,7 @@ STAGE="$(mktemp -d)"
 #
 # The same conversion hanzoai/openapi's generate.py and cpp-sdk's generate.sh
 # already do, for the same reason, and deliberately NOT written back as a second
-# committed artifact: there is one document, and it is hanzo.yaml.
+# committed artifact: there is one document, and it is hanzoai/cloud's.
 SPEC_JSON="$STAGE/hanzo.json"
 python3 -c 'import json,sys,yaml; json.dump(yaml.safe_load(open(sys.argv[1])), open(sys.argv[2],"w"))' \
   "$SPEC" "$SPEC_JSON"
@@ -80,13 +75,17 @@ python3 -c 'import json,sys,yaml; json.dump(yaml.safe_load(open(sys.argv[1])), o
 OUT="$STAGE/gen"
 # --skip-validate-spec: the document is OpenAPI 3.1, and 3.1 made `responses`
 # OPTIONAL on an operation. The validator in generator 7.14.0 still enforces the
-# 3.0 rule that it is required, so it REFUSES a document that is valid. Measured
-# on hanzoai/cloud's openapi.yaml: 684 of 1636 operations are routes the router
-# proves exist and whose response shape no seam can state, and cloud emits those
-# with no `responses` key on purpose (openapi/openapi.go — "absent stays valid
-# and absent beats invented"). Without this flag the crate cannot be generated
-# from the one document at all, which is exactly why the published crate was
-# still a projection of the retired hand-authored master.
+# 3.0 rule that it is required, so it REFUSES a document that is valid. A large
+# share of hanzoai/cloud's operations are routes the router proves exist and whose
+# response shape no seam can state, and cloud emits those with no `responses` key
+# on purpose (openapi/openapi.go — "absent stays valid and absent beats
+# invented"). Without this flag the crate cannot be generated from the one
+# document at all, which is exactly why the published crate was still a projection
+# of the retired hand-authored master.
+#
+# The share is deliberately not written down here. It moves with every release,
+# a number in a comment moves with nothing, and openapi/floor.json in hanzoai/cloud
+# is the one place in the fleet where a count of the document is allowed to live.
 #
 # What keeps a bad document out is not the validator, it is `cargo build` — the
 # whole generated crate plus the six example flows, in hanzo.yml's test: block.
@@ -119,7 +118,7 @@ if [ "$check" = 1 ]; then
   # copy. This is what makes "never edit crates/hanzo-client/src" a fact rather
   # than a convention — and it is what lets the release train gate on this repo.
   if diff -qr "$OUT/src" crates/hanzo-client/src >/dev/null 2>&1; then
-    echo "clean: crates/hanzo-client/src is what hanzo.yaml projects"
+    echo "clean: crates/hanzo-client/src is what the document projects"
     exit 0
   fi
   echo "DRIFTED: crates/hanzo-client/src"
